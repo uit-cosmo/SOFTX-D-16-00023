@@ -1,7 +1,92 @@
-Instructions on how to run: 
+=============
+Linux Ubuntu:
 
-In terminal: cd /Users/martinrypdal/Dropbox/FRIPRO/FortranCode/EBM/src
+1. Install netcdf and C and Fortran compilers on Linux Ubuntu (full howto: https://cloud-gc.readthedocs.io/en/stable/chapter04_developer-guide/install-basic.html)
 
-In terminal: make -f /Users/martinrypdal/Dropbox/FRIPRO/FortranCode/EBM/src/Makefile 
+    Update package metadata:
 
-In terminal: /Users/martinrypdal/Dropbox/FRIPRO/FortranCode/EBM/src/EBM 
+        $ sudo apt-get update
+
+    Install GNU compiler:
+
+        $ sudo apt-get install gcc gfortran
+
+    Executables will be installed to /usr/bin/:
+
+        $ which gcc gfortran
+        /usr/bin/gcc
+        /usr/bin/gfortran
+
+    Check versions:
+
+        $ gcc --version
+        gcc (Ubuntu 5.4.0-6ubuntu1~16.04.9) 5.4.0 20160609
+        ...
+        $ gfortran --version
+        GNU Fortran (Ubuntu 5.4.0-6ubuntu1~16.04.9) 5.4.0 20160609
+        ...
+
+
+    Install netcdf
+
+        $ sudo apt-get install libnetcdf-dev libnetcdff-dev
+
+    Check NetCDF-C configuration:
+
+        $ nc-config --all
+
+        This netCDF 4.4.0 has been built with the following features:
+        ...
+
+    Check NetCDF-Fortran configuration:
+
+        $ nf-config --all
+
+        This netCDF-Fortran 4.4.3 has been built with the following features:
+        ...
+        --prefix    -> /usr
+        --includedir-> /usr/include
+        --version   -> netCDF-Fortran 4.4.3
+
+    --includedir will be used to include this NetCDF library when compiling Fortran code.
+
+
+2. Navigate to SOFTX-D-16-00023
+    $ cd SOFTX-D-16-00023
+
+   and modify NA and NI paths in EBM/src/Makefile and paths in EBM/preprocess/preprocess.sh according to the ones indicated by --includedir above.
+
+3. Compile the EBM code:
+    
+    $ make -f EBM/src/Makefile
+
+4. Give executable permissions to EBM program:
+
+    $ chmod +x EBM/src/ebm.sh
+
+5. Run the EBM program:
+
+    $ ./EBM/src/ebm.sh
+
+
+===========
+MacOS
+
+A. Install gfortran compiler using Homebrew: https://www.macinchem.org/reviews/cheminfo/cheminfoMacUpdate.php
+ 
+B. Install netcdf using this command in the Terminal
+
+    brew install netcdf
+
+C. Modify paths in EBM/scr/Makefile and /preprocess/preprocess.sh (see pt 2. in Linux version)
+
+D. At the beginning of Makefile add the following line
+
+    FC=gfortran -fallow-argument-mismatch
+
+E. Compile program and change permissions (see points 3., 4. in Linux version)
+
+F. Run program
+
+    EBM/src/ebm.sh 
+
