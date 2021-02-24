@@ -1,0 +1,7 @@
+Instructions on how to run: 
+
+In terminal: cd /Users/martinrypdal/Dropbox/FRIPRO/FortranCode/EBM/src
+
+In terminal: make -f /Users/martinrypdal/Dropbox/FRIPRO/FortranCode/EBM/src/Makefile 
+
+In terminal: /Users/martinrypdal/Dropbox/FRIPRO/FortranCode/EBM/src/EBM 
