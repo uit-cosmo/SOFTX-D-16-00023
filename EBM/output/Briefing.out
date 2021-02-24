@@ -1,0 +1,129 @@
+ SUCCESSLY reading geography from [../input/geography.nc] into simulation!
+ SUCCESSLY reading albedo from [../input/albedo.nc] into simulation!
+
+ Radiation Constants   A: 210.30 B:   2.15
+
+ Diffusion Parameters
+ KlandSP:   0.20 KlandNP:   0.28
+     Keq:   0.65  Kocean:   0.40
+
+      Radiative Relaxation Times (C/B) 
+    Atmosphere over sea ice : 51.61 days
+       Atmosphere over snow : 33.81 days
+       Atmosphere over land : 35.69 days
+ Atmosphere over mixed layer:  4.39 yrs
+
+ Lon/Lat Monthly Mean 2D Albedo
+
+ Constant Solar Irradiance
+ Constant Orbital Parameters
+
+ Start Energy Balance Model simulation:
+
+  Year   Global Temperature
+    1     7.23288
+    2     9.56215
+    3    10.70984
+    4    11.69335
+    5    12.46670
+    6    13.06139
+    7    13.51699
+    8    13.86760
+    9    14.14000
+   10    14.35441
+   11    14.52592
+   12    14.66573
+   13    14.78204
+   14    14.88104
+   15    14.96715
+   16    15.04375
+   17    15.11330
+   18    15.17761
+   19    15.23806
+   20    15.29563
+   21    15.35107
+   22    15.40491
+   23    15.45759
+   24    15.50940
+   25    15.56054
+   26    15.61122
+   27    15.66154
+   28    15.71159
+   29    15.76145
+   30    15.81114
+   31    15.86074
+   32    15.91026
+   33    15.95972
+   34    16.00914
+   35    16.05852
+   36    16.10786
+   37    16.15721
+   38    16.20653
+   39    16.25584
+   40    16.30515
+   41    16.35445
+   42    16.40374
+   43    16.45305
+   44    16.50233
+   45    16.55161
+   46    16.60091
+   47    16.65020
+   48    16.69949
+   49    16.74877
+   50    16.79805
+   51    16.84733
+   52    16.89663
+   53    16.94591
+   54    16.99519
+   55    17.04448
+   56    17.09377
+   57    17.14304
+   58    17.19233
+   59    17.24161
+   60    17.29090
+   61    17.34017
+   62    17.38946
+   63    17.43873
+   64    17.48804
+   65    17.53731
+   66    17.58660
+   67    17.63588
+   68    17.68517
+   69    17.73445
+   70    17.78374
+   71    17.83302
+   72    17.88231
+   73    17.93159
+   74    17.98087
+   75    18.03016
+   76    18.07945
+   77    18.12873
+   78    18.17801
+   79    18.22729
+   80    18.27658
+   81    18.32586
+   82    18.37515
+   83    18.42444
+   84    18.47371
+   85    18.52300
+   86    18.57229
+   87    18.62157
+   88    18.67085
+   89    18.72014
+   90    18.76942
+   91    18.81870
+   92    18.86799
+   93    18.91729
+   94    18.96655
+   95    19.01585
+   96    19.06511
+   97    19.11441
+   98    19.16369
+   99    19.21297
+
+ WARNING: EQUILIBRIUM NOT REACHED AFTER  99 YEARS!!!!
+         GLOBAL TEMPERATURE =  19.2130
+
+ Elapsed time:      2.59 minutes
+ Monthly temperature results stored successfully in ../output/monthly-output.nc!
+ 48 time steps temperature results stored successfully in ../output/timesteps-output2.nc!
