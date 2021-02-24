@@ -5,6 +5,9 @@
 ! A netCDF version of the Energy Balance Model 
 !         using the full multigrid solver
 
+!  Copyright (c) https://doi.org/10.1016/j.softx.2017.07.003
+!  Modifications Copyright (c) 2021 UiT The Arctic University of Norway
+
 !  EBM_netCDF is a free software.
 !  You can redistribute it and/or modify it 
 !  under the terms of the GNU General Public License as published by
