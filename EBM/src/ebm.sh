@@ -4,5 +4,4 @@
 
 make
 ./EBM
-
 rm -rf *~

@@ -7,13 +7,13 @@
 
 !     This is the name of the data file we will create.
       character*(*) FILE_NAME
-      parameter (FILE_NAME = '../output/timesteps-output.nc')
+      parameter (FILE_NAME = '/Users/martinrypdal/Dropbox/FRIPRO/FortranCode/EBM/output/timesteps-output2.nc')
       integer ncid
 
       integer NDIMS 
       parameter (NDIMS = 4)
       integer NRECS, NLVS, NLATS, NLONS
-      parameter (NRECS = 48, NLVS=1, NLATS = 65, NLONS = 128)
+      parameter (NRECS = 4752, NLVS=1, NLATS = 65, NLONS = 128)
       character*(*) LVL_NAME, LAT_NAME, LON_NAME, REC_NAME
       parameter (LVL_NAME='level', LAT_NAME = 'latitude', LON_NAME = 'longitude')
       parameter (REC_NAME = 'time')
@@ -58,17 +58,26 @@
 !     Error handling.
       integer retval
 
-      integer ts
-      character::  tsnum*2, BINfile*30
-      do ts = 1, NRECS
+      integer ts, teller
+      integer :: tellerto = 0
+    
+      character::  tsnum*2, BINfile*30, tellerstring*2
+    do teller = 2, 99
+        do ts = 1, 48
          write (tsnum, '(i2)') ts
+         write (tellerstring, '(i2)') teller
+
          if (ts < 10) tsnum(1:1) = '0'
-         BINfile='../output/t'//tsnum//'.bin'
+         if (teller < 10) tellerstring(1:1) = '0'
+
+         BINfile='../output/t'//tsnum//'.'//tellerstring//'.bin'
          open (unit=1, file=BINfile, status='old')
          read (1,*) temp
          close (1,status='delete')
-         temp_out(:,:,NLVS,ts) = temp(:,:)
+         tellerto = tellerto + 1
+         temp_out(:,:,NLVS,tellerto) = temp(:,:)
       end do
+    end do
 
 !     Create real data to write.
       do lat = 1, NLATS

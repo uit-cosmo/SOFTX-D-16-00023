@@ -7,8 +7,9 @@
 
 !     This is the name of the data file that will be created.
       character*(*) FILE_NAME
-      parameter (FILE_NAME = '../output/monthly-output.nc')
+      parameter (FILE_NAME = '/Users/martinrypdal/Dropbox/FRIPRO/FortranCode/EBM/output/monthly-output.nc')
       integer ncid
+
 
       integer NDIMS 
       parameter (NDIMS = 4)

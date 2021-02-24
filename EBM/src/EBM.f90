@@ -146,7 +146,7 @@ integer:: geography(NX6,NY6)
 integer:: i, j, l, n, yr, tstep, year, ts
 integer::  Maxyrs, mcount,nf
 logical:: Equilibrium 
-character:: datafile*40, step*2, YearChar*4, RunType*5
+character:: datafile*40, step*2, YearChar*4, RunType*5, yearstring*2
 character(len=3):: months(12) = (/'jan','feb','mar','apr','may','jun',  &
                                   'jul','aug','sep','oct','nov','dec'/)
                                   
@@ -208,7 +208,7 @@ initial_year=1950
 !CO2ppm=315.0 !21kaBP
 !initial_year=-21000
 
-Maxyrs = 100
+Maxyrs = 99
 FirstYr = Maxyrs
 
 !------------------------  Initialize some arrays  ----------------------- 
@@ -288,12 +288,24 @@ write (2,24)
 24 format(/,'  Year   Global Temperature')
 !---------------------- START LOOP OVER MODEL YEARS  --------------------- 
 Equilibrium = .false. 
-DO yr = 1, Maxyrs            
+DO yr = 1, Maxyrs   
+
+
+! ---------------- Martin added this ------------------------------------
+
+	CO2ppm=CO2ppm*1.02
+	call A_value(CO2ppm, A)
+	CALL Solar_Forcing (0, .false., S0, .false., Pcoalbedo, A, ecc, ob, per, SF)    
+
+! ---------------- Martin added this ------------------------------------     
 
   F = SF                             
    
 !--------------------  START LOOP OVER MODEL TIME STEPS  ----------------- 
-  DO tstep = 1, NT             
+  DO tstep = 1, NT    
+
+
+         
      
     Converged = .false.
     if (tstep == 38 .and. Equilibrium) then      
@@ -342,10 +354,13 @@ DO yr = 1, Maxyrs
     end if
 
 !---------------------    run time step data  ----------------------------
-    if (yr==Maxyrs.or.Equilibrium) then     
-      write (step, '(i2)') tstep 
+    !if (yr==Maxyrs.or.Equilibrium) then
+    if (yr>1) then
+      write (step, '(i2)') tstep
+      write (yearstring, '(i2)') yr
       if (tstep < 10) step(1:1) = '0'
-      datafile = '../output/t'//step//'.bin'      
+      if (yr < 10) yearstring(1:1) = '0'
+      datafile = '../output/t'//step//'.'//yearstring//'.bin'
       open (unit=7, file=datafile, status='replace')            
       write (7,*) Temp
       close(7)
@@ -364,7 +379,9 @@ DO yr = 1, Maxyrs
       end if
     end if
     GTemp =  GTemp  + Global (Temp, z(iaw(NG)), 0)     
-    tscount = tscount + 1.0           
+    tscount = tscount + 1.0   
+
+	       
   
   END DO                       
 END DO                        
@@ -383,7 +400,7 @@ write (*,90) elapsed_time/60.
 write (2,90) elapsed_time/60. 
 90 format(/,' Elapsed time:',f10.2,' minutes') 
 
-call monthly_output
+!call monthly_output
 call timesteps_output
 
 close (2)
