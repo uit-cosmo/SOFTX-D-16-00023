@@ -71,9 +71,11 @@ INCLUDE 'ebm.inc'
 ! rhs(NX6,NY6):  right hand side of equation
 ! Temp(NX6,NY6):  surface temperatures 
 !  Lastrhs(NX6,NY6):  last values of the RHS 
-!  F(NX6,NY6,NT):  total radiative forcing 
+!  F(NX6,NY6,NT):  total radiative forcing
+!  F2(NX6,NY6,NT): total radiative forcing with updating albedo in every time step
 !  SF(NX6,NY6,NT):  TOA solar radiative forcing 
 !  Pcoalbedo(NX6,NY6,NT):  Planetary Coalbedos
+!  Pcoalbedo2(NX6,NY6): Planetary Coalbedos after initial year 1
 !  HeatCap(NX6,NY6):  heat capacities
 !  sum(NX6,NY6):  sum over time steps
 !  latd(NY6):  latitude (degrees)
@@ -93,7 +95,8 @@ INCLUDE 'ebm.inc'
 !  tau_mixed_layer:   relaxation time for mixed layer
 !  A:   OLR coefficient, A+BT
 !  spinup:  model spin-up time
-!  geography(NX6,NY6):  masks for the whole globe      
+!  geography(NX6,NY6):  masks for the whole globe     
+!  geography_0(NX6,NY6): masks for the whole globe with land = 1, water = 2
 !  RelErr = 2.0e-5:  relative error between years
 !  nx(NG), ny(NG):  grid points on each level
 !  h(NG):  dx,dy on each grid level
@@ -116,9 +119,10 @@ INCLUDE 'ebm.inc'
 real::  rhs(NX6,NY6)                        
 real::  Temp(NX6,NY6)                       
 real::  Lastrhs(NX6,NY6)                    
-real::  F(NX6,NY6,NT)                       
-real::  SF(NX6,NY6,NT)                      
-real::  Pcoalbedo(NX6,NY6,NT)               
+real::  F(NX6,NY6,NT), F2(NX6,NY6,NT)                   
+real::  SF(NX6,NY6,NT)           
+real::  SF2(NX6,NY6,NT)            
+real::  Pcoalbedo(NX6,NY6,NT), Pcoalbedo2(NX6,NY6)              
 real::  HeatCap(NX6,NY6)                     
 real::  sum(NX6,NY6)                        
 real::  latd(NY6)                            
@@ -142,7 +146,7 @@ real::  CO2ppm
 integer:: initial_year
 
 real:: SECNDS, secs, elapsed_time           
-integer:: geography(NX6,NY6)                
+integer:: geography(NX6,NY6), geography_0(NX6,NY6)              
 integer:: i, j, l, n, yr, tstep, year, ts
 integer::  Maxyrs, mcount,nf
 logical:: Equilibrium 
@@ -268,9 +272,12 @@ call orbital_params(initial_year,ecc,ob,per)
 
 !------------------  Initailize the TOA solar forcing  ------------------- 
 CALL Solar_Forcing (0, .false., S0, .false., Pcoalbedo, A, ecc, ob, per, SF)
+CALL Solar_Forcing_Without_Albedo (0, .false., S0, .false., ecc, ob, per, SF2)    
 
 !---- Initialize the temperature field from Legates and Willmott data ---- 
-CALL Initial_Temp (Temp)            
+CALL Initial_Temp (Temp)  
+!---- Initialize geograhpy of the Earth ---- 
+CALL read_geography_0 (geography_0)          
 
 year = 1
 
@@ -295,18 +302,18 @@ DO yr = 1, Maxyrs
 
 	CO2ppm=CO2ppm*1.02
 	call A_value(CO2ppm, A)
-	CALL Solar_Forcing (0, .false., S0, .false., Pcoalbedo, A, ecc, ob, per, SF)    
+	CALL Solar_Forcing (0, .false., S0, .false., Pcoalbedo, A, ecc, ob, per, SF)   
 
+! -------------- Solar forcing without the albedo for updating albedo --------
+  CALL Solar_Forcing_Without_Albedo (0, .false., S0, .false., ecc, ob, per, SF2)     
 ! ---------------- Martin added this ------------------------------------     
 
-  F = SF                             
-   
+  F = SF 
+
 !--------------------  START LOOP OVER MODEL TIME STEPS  ----------------- 
   DO tstep = 1, NT    
 
 
-         
-     
     Converged = .false.
     if (tstep == 38 .and. Equilibrium) then      
       write (*,58) yr-1, AnnTemp                            
@@ -339,8 +346,21 @@ DO yr = 1, Maxyrs
       GTemp  = 0.0                
          
     end if
-   
-    CALL UpdateRHS (tstep, HeatCap, Temp, F, rhs, LastRhs)
+
+    !---- Nils added this ----
+    if (yr==1) then
+      F2 = SF 
+    else
+      CALL update_albedo_timestep (Pcoalbedo2, Temp, geography_0)
+      do j = 1, NY6
+        do i = 1, NX6
+          F2(i, j, tstep) = SF2(i, j, tstep) * Pcoalbedo2(i, j) - A
+        end do
+      end do
+    end if
+    !-------------------
+
+    CALL UpdateRHS (tstep, HeatCap, Temp, F2, rhs, LastRhs)
       
 !    CALL FMG_Solver (nx, ny, h, geom, GCnp, GCsp, Converged, rhs, Temp, .FALSE.)
       CALL FMG_Solver (nx, ny, h, geom, GCnp, GCsp, Converged, rhs, Temp, .FALSE.)
