@@ -247,6 +247,70 @@ end do
 
 END SUBROUTINE
 
+
+SUBROUTINE Solar_Forcing_Without_Albedo (yr, Solar_Cycle, S0, Orbital, &
+  ecc, ob, per, SF)
+
+IMPLICIT NONE
+INCLUDE 'ebm.inc'
+
+integer:: yr, i, j, ts
+logical:: Solar_Cycle, Orbital
+real:: ob, ecc, per, S0(NT)
+real,dimension(NX6,NY6,NT):: SF
+real:: lambda(NT+1), solar(NY6,NT), lat, SUM
+real,dimension(NY6):: siny, cosy, tany
+!-------------------------------------------------------------------------
+
+! Calculate the sin, cos, ---------------------
+
+! Calculate the sin, cos, and tan of the latitudes of Earth from the 
+! colatitudes, calculate the insolation
+
+
+if (yr==0) then          
+  do j = 1, NY6 
+    lat = pi/2.0 - dy*real(j-1)       ! latitude in radians
+    siny(j) = sin(lat) 
+    if (j==1) then
+      cosy(j) = 0.0
+      tany(j) = 1000.0
+    else if (j==NY6) then
+      cosy(j) = 0.0
+      tany(j) = -1000.0 
+    else
+      cosy(j) = cos(lat)
+      tany(j) = tan(lat) 
+    end if
+  end do
+  call insolation (pi, dt, ob, ecc, per, NT, NY6, siny, cosy, tany, lambda, &
+                    S0, solar)  
+else if (yr > 0 .and. (Solar_Cycle .or. Orbital)) then
+  call insolation (pi, dt, ob, ecc, per, NT, NY6, siny, cosy, tany, lambda, &
+                    S0, solar)
+end if
+
+DO J=1, NY6
+  SUM=0.0
+  DO TS=1, NT
+    SUM=SUM+solar(j,ts)
+  ENDDO
+
+ENDDO
+
+! calcualte the seasonal forcing
+do ts = 1, NT
+  do j = 1, NY6
+    do i = 1, NX6
+      SF(i,j,ts) = solar(j,ts) 
+    end do
+  end do
+end do
+
+END SUBROUTINE
+
+
+
 !***************************************************************************
 
 SUBROUTINE insolation (pi, dt, ob, ecc, per, nt, nlat, siny, cosy, tany, &
