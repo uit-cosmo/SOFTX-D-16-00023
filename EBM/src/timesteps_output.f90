@@ -7,7 +7,7 @@
 
 !     This is the name of the data file we will create.
       character*(*) FILE_NAME
-      parameter (FILE_NAME = '/Users/martinrypdal/Dropbox/FRIPRO/FortranCode/EBM/output/timesteps-output2.nc')
+      parameter (FILE_NAME = '../output/timesteps-output2.nc')
       integer ncid
 
       integer NDIMS 
