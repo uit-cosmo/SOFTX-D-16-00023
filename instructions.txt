@@ -56,17 +56,25 @@ Linux Ubuntu:
 
    and modify NA and NI paths in EBM/src/Makefile and paths in EBM/preprocess/preprocess.sh according to the ones indicated by --includedir above.
 
-3. Compile the EBM code:
+3. Navigate to EBM/src/
+
+    $ cd EBM/src/
+
+   and compile the EBM code:
     
-    $ make -f EBM/src/Makefile
+    $ make -f Makefile
+
+   It might be necessary to remove the following line from Makefile if it hinders compiling (the line seems to be required for MacOS users)
+
+    FC=gfortran -fallow-argument-mismatch
 
 4. Give executable permissions to EBM program:
 
-    $ chmod +x EBM/src/ebm.sh
+    $ chmod +x ebm.sh
 
 5. Run the EBM program:
 
-    $ ./EBM/src/ebm.sh
+    $ ./ebm.sh
 
 
 ===========
@@ -90,3 +98,18 @@ F. Run program
 
     EBM/src/ebm.sh 
 
+============
+Git-ignoring files:
+
+In addition to .gitignore (which does not ignore existing, modified files) one can choose to ingore the two files with local paths, and all the files in EBM/output/directory by running the follwoging two commands:
+
+    $ git update-index --assume-unchanged EBM/src/Makefile EBM/preprocess/preprocess.sh
+    $ git ls-files -z EBM/output/ | xargs -0 git update-index --assume-unchanged
+
+In order to revoke ignoring with the above method run:
+
+    $ git update-index --no-assume-unchanged <file>
+
+In order to override ignoring by .gitignore, change the local.gitignore content, or run:
+
+    $ git add -f <file>
