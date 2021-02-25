@@ -1,2 +1,4 @@
 *.bin
 *.out
+EBM/src/EBM
+EBM/output/Briefing.out
