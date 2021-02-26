@@ -146,12 +146,15 @@ real,parameter:: days_per_yr = 365.2422      ! days per year
        heatcap(i,j) = C_snow + C_atmos         
      else if (geo == 4) then                   ! lakes, inland seas
        heatcap(i,j) = C_mixed_layer/3.0 + C_atmos 
+       print *, "lakes, inland seas"
      else if (geo == 5) then                   ! Pacific ocean 
        heatcap(i,j) = C_mixed_layer + C_atmos
      else if (geo == 6) then                   ! Atlantic ocean 
        heatcap(i,j) = C_mixed_layer + C_atmos
+       print *, "Atlantic ocean"
      else if (geo == 7) then                   ! Indian ocean 
        heatcap(i,j) = C_mixed_layer + C_atmos
+       print *, "Indian ocean"
      else if (geo == 8) then                   ! Mediterranean 
        heatcap(i,j) = C_mixed_layer + C_atmos
      end if                           
