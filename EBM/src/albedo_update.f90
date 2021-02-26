@@ -6,15 +6,15 @@
 ! Journal of the Atmospheric Sciences
 ! Vol 36, pp 1189-1204.
 
-    SUBROUTINE update_albedo_timestep (Pcoalbedo, Temp, geography_0)
+    SUBROUTINE update_albedo_timestep (Pcoalbedo, Temp, geography_0, geography_updated)
     implicit none
     
     integer,parameter:: nx=128, ny=65
     real:: albedo(nx,ny), legende, Temp(nx,ny), Pcoalbedo(nx,ny)
     integer:: i, j, geo, temp_mask_int
-    integer:: geography_0(nx,ny), temp_mask(nx,ny)
+    integer:: geography_0(nx,ny), temp_mask(nx,ny), geography_updated(nx,ny)
     
-    CALL temperature_mask (Temp)
+    CALL temperature_mask (Temp, temp_mask)
  
     ! ================  newly added ==================================
     do j=1,ny
@@ -25,17 +25,32 @@
             !landmask: 1. land;  2. sea ice; 3. land ice; 5 ocean.
             if((geo.eq.1).and.(temp_mask_int.eq.0)) then 
                  albedo(i,j)=0.30 +0.09*legende !land without ice 
+                 geography_updated(i,j) = 1
+                 !print *, "land without ice"
             end if
-            if((geo.eq.2).and.(temp_mask_int.eq.1)) albedo(i,j)=0.60 !sea ice
-            if((geo.eq.1).and.(temp_mask_int.eq.1)) albedo(i,j)=0.70 !land with ice
-            if((geo.eq.2).and.(temp_mask_int.eq.0)) albedo(i,j)=0.29 +0.09*legende !ocean without ice
+            if((geo.eq.2).and.(temp_mask_int.eq.1)) then
+                albedo(i,j)=0.60 !sea ice
+               
+                geography_updated(i,j) = 2
+                !print *, "sea ice"
+            end if
+            if((geo.eq.1).and.(temp_mask_int.eq.1)) then 
+                albedo(i,j)=0.70 !land with ice
+                geography_updated(i,j) = 3
+                !print *, "land ice"
+            end if
+            if((geo.eq.2).and.(temp_mask_int.eq.0)) then 
+                albedo(i,j)=0.29 +0.09*legende !ocean without ice
+                geography_updated(i,j) = 5
+                !print *, "ocean"
+            end if
             Pcoalbedo(i, j) = 1.0 - albedo(i, j)
         end do
     end do
     END SUBROUTINE
 
 
-    SUBROUTINE temperature_mask (Temp)
+    SUBROUTINE temperature_mask (Temp, temp_mask)
         ! creates temperature mask for albedo calculation:
         ! 1 corresponds to ice
         ! 0 corresponds to no ice
@@ -49,11 +64,9 @@
         ! ================  newly added ==================================
         do j=1,ny
             do i=1,nx
-                if(Temp(i, j).le.-2)  then
+                if(Temp(i, j).le.-5)  then ! freezing temp of water 
                     temp_mask(i,j) = 1 ! 1 corresponds to ice
-                    
-                end if 
-                if(Temp(i, j).gt.-2)  then 
+                else
                     temp_mask(i,j) = 0  ! 0 corresponds to no ice
                 end if 
             end do
@@ -69,7 +82,6 @@
         integer:: geography_0(nx,ny)
         integer:: i, j
 
-        !open(33 , file= '/home/nils/Documents/Models/FortranCode/EBM/preprocess/geography_0.dat', status='old')
         open(33 , file= '../preprocess/geography_0.dat', status='old')
     
         do j = ny, 1, -1
