@@ -97,6 +97,7 @@ INCLUDE 'ebm.inc'
 !  spinup:  model spin-up time
 !  geography(NX6,NY6):  masks for the whole globe     
 !  geography_0(NX6,NY6): masks for the whole globe with land = 1, water = 2
+!  geography_updated(NX6,NY6): masks for the whole globe, updated in every step for heat_capacity
 !  RelErr = 2.0e-5:  relative error between years
 !  nx(NG), ny(NG):  grid points on each level
 !  h(NG):  dx,dy on each grid level
@@ -146,7 +147,7 @@ real::  CO2ppm
 integer:: initial_year
 
 real:: SECNDS, secs, elapsed_time           
-integer:: geography(NX6,NY6), geography_0(NX6,NY6)              
+integer:: geography(NX6,NY6), geography_0(NX6,NY6), geography_updated(NX6,NY6)            
 integer:: i, j, l, n, yr, tstep, year, ts
 integer::  Maxyrs, mcount,nf
 logical:: Equilibrium 
@@ -277,7 +278,9 @@ CALL Solar_Forcing_Without_Albedo (0, .false., S0, .false., ecc, ob, per, SF2)
 !---- Initialize the temperature field from Legates and Willmott data ---- 
 CALL Initial_Temp (Temp)  
 !---- Initialize geograhpy of the Earth ---- 
-CALL read_geography_0 (geography_0)          
+CALL read_geography_0 (geography_0)      
+geography_updated =  geography_0
+
 
 year = 1
 
@@ -351,7 +354,10 @@ DO yr = 1, Maxyrs
     if (yr==1) then
       F2 = SF 
     else
-      CALL update_albedo_timestep (Pcoalbedo2, Temp, geography_0)
+      CALL update_albedo_timestep (Pcoalbedo2, Temp, geography_0, geography_updated)
+      CALL HeatCapacities (HeatCap, geography_updated, tau_land, tau_snow, tau_sea_ice, &
+                   tau_mixed_layer, .FALSE.)
+      CALL FMG_Setup (nx, ny, h, geom, Heatcap, geography_updated, GCnp, GCsp) 
       do j = 1, NY6
         do i = 1, NX6
           F2(i, j, tstep) = SF2(i, j, tstep) * Pcoalbedo2(i, j) - A
