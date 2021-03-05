@@ -1,7 +1,8 @@
 import numpy as  np 
 import netCDF4 
+import datetime
 from matplotlib import pyplot as plt
-
+from netCDF4 import Dataset,num2date,date2num
 dataset = '../FortranCode/EBM/output/timesteps-output2.nc'
 geography = np.genfromtxt('EBM/preprocess/geography_0.dat', dtype=int, delimiter=1)
 
@@ -32,8 +33,31 @@ def define_albedo_1st_year():
     #np.savetxt('EBM/preprocess/albedo_year_1.dat', albedo, fmt= "%i",delimiter = '')
     return albedo
 albedo = define_albedo_1st_year()
-print(albedo)
 
-plt.imshow(albedo[0,:,:])
-plt.colorbar()
-plt.show()
+
+def save_netCDF():
+    
+    nsteps = 48;
+    unout = 'UNLIMITED'
+    # -----------------------
+
+    datesout = [datetime.datetime(1+iyear,1,1) for iyear in range(nsteps)]; # create datevalues
+    # =========================
+    ncout = Dataset('albedo_year_1.nc','w','NETCDF4'); # using netCDF3 for output format 
+    ncout.createDimension('lon',nx);
+    ncout.createDimension('lat',ny);
+    ncout.createDimension('time', None);
+    latvar = ncout.createVariable('lat','float32',('lat'));
+    latvar = lat
+    lonvar = ncout.createVariable('lon','float32',('lon'));
+    print(lonvar[:])
+    lonvar = lon
+    print(lonvar[:])
+
+    timevar = ncout.createVariable('time','int',('time'))#;timevar.setncattr('units',unout);
+    #timevar[:]=date2num(datesout,unout);
+    myvar = ncout.createVariable('albedo','float32',('time','lat','lon'));myvar.setncattr('units','dimensionless');myvar[:] = albedo;
+    ncout.close();
+    
+    
+save_netCDF()
