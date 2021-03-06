@@ -4,3 +4,4 @@ EBM/src/EBM
 EBM/output/Briefing.out
 EBM/src/fort.20
 *.nc
+*.json
