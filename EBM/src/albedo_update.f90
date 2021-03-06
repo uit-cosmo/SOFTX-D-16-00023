@@ -64,7 +64,7 @@
         ! ================  newly added ==================================
         do j=1,ny
             do i=1,nx
-                if(Temp(i, j).le.-5)  then ! freezing temp of water 
+                if(Temp(i, j).le.-1)  then ! freezing temp of water 
                     temp_mask(i,j) = 1 ! 1 corresponds to ice
                 else
                     temp_mask(i,j) = 0  ! 0 corresponds to no ice

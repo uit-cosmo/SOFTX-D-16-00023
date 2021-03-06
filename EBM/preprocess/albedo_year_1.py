@@ -44,19 +44,19 @@ def save_netCDF():
     datesout = [datetime.datetime(1+iyear,1,1) for iyear in range(nsteps)]; # create datevalues
     # =========================
     ncout = Dataset('albedo_year_1.nc','w','NETCDF4'); # using netCDF3 for output format 
-    ncout.createDimension('lon',nx);
-    ncout.createDimension('lat',ny);
+    ncout.createDimension('latitude',ny)
+    ncout.createDimension('longitude',nx)
     ncout.createDimension('time', None);
-    latvar = ncout.createVariable('lat','float32',('lat'));
+    latvar = ncout.createVariable('latitude','float32',('latitude'));
     latvar = lat
-    lonvar = ncout.createVariable('lon','float32',('lon'));
+    lonvar = ncout.createVariable('longitude','float32',('longitude'));
     print(lonvar[:])
     lonvar = lon
     print(lonvar[:])
 
     timevar = ncout.createVariable('time','int',('time'))#;timevar.setncattr('units',unout);
     #timevar[:]=date2num(datesout,unout);
-    myvar = ncout.createVariable('albedo','float32',('time','lat','lon'));myvar.setncattr('units','dimensionless');myvar[:] = albedo;
+    myvar = ncout.createVariable('albedo','float32',('time','latitude','longitude'));myvar.setncattr('units','dimensionless');myvar[:] = albedo;
     ncout.close();
     
     
