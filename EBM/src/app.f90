@@ -168,22 +168,22 @@ END SUBROUTINE
 ! You can read into your own initial temperature here
 SUBROUTINE Initial_Temp (Temp)
 
-IMPLICIT NONE
-INCLUDE 'ebm.inc'
+  IMPLICIT NONE
+  INCLUDE 'ebm.inc'
 
-integer i,j
-real:: Temp(NX6,NY6)
-real,allocatable:: data(:,:)
+  integer i,j
+  real Temp(NX6,NY6)
 
-allocate (data(NX6,NY6))
+  open(344 , file= '../preprocess/init_temp.dat', status='old')
 
-do i=1,nx6
-do j=1,ny6
-temp(i,j)=5.0
-end do
-end do
-
-deallocate (data)
+  do j = NY6, 1, -1
+      read (344,100) (temp(i,j),i=1,NX6)
+ 
+  100  format (128F4.6)
+  end do
+  
+  close(344)
+  
 
 END SUBROUTINE
 
