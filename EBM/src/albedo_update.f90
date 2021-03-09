@@ -14,7 +14,7 @@
     integer:: i, j, geo, temp_mask_int
     integer:: geography_0(nx,ny), temp_mask(nx,ny), geography_updated(nx,ny)
     
-    CALL temperature_mask (Temp, temp_mask)
+    CALL temperature_mask (Temp, temp_mask, geography_0)
  
     ! ================  newly added ==================================
     do j=1,ny
@@ -50,7 +50,7 @@
     END SUBROUTINE
 
 
-    SUBROUTINE temperature_mask (Temp, temp_mask)
+    SUBROUTINE temperature_mask (Temp, temp_mask, geography_0)
         ! creates temperature mask for albedo calculation:
         ! 1 corresponds to ice
         ! 0 corresponds to no ice
@@ -58,16 +58,20 @@
         
         integer,parameter:: nx=128, ny=65
         real:: Temp(nx,ny)
-        integer:: temp_mask(nx,ny)
-        integer:: i, j
+        integer, intent(out) :: temp_mask(nx,ny) 
+        integer:: i, j, geography_0(nx,ny)
         
         ! ================  newly added ==================================
         do j=1,ny
             do i=1,nx
-                if(Temp(i, j).le.-1)  then ! freezing temp of water 
+                if((Temp(i, j).le.-1).and.(geography_0(i, j).eq.2))  then ! freezing temp of water 
                     temp_mask(i,j) = 1 ! 1 corresponds to ice
-                else
+                elseif ((Temp(i, j).gt.-1).and.(geography_0(i, j).eq.2)) then
                     temp_mask(i,j) = 0  ! 0 corresponds to no ice
+                elseif ((Temp(i, j).le.-5).and.(geography_0(i, j).eq.1)) then
+                    temp_mask(i,j) = 1  ! 0 corresponds to no ice
+                else 
+                    temp_mask(i,j) = 0
                 end if 
             end do
         end do
