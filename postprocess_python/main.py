@@ -181,36 +181,40 @@ if __name__ == '__main__':
 
         # -------- 3. Compute global temperature and total frozen area: weekly (for each separate time epoch)
         # todo !!: not north point to decide temperature cause Norhte pole has too much impact then
-        total_frozen_area_weekly = np.empty(epochs_in_year * num_years)
-        global_temperature_weekly = np.empty(epochs_in_year * num_years)
+        total_frozen_area_per_epoch = np.empty(epochs_in_year * num_years)
+        global_temperature_per_epoch = np.empty(epochs_in_year * num_years)
         for t in tqdm(range(0, epochs_in_year * num_years), position=0, leave=True):       # without progress bar: for t in range(0, epochs_in_period*num_periods):
             epoch_temps = temps[t, 0, :, :]
             indices_below_threshold = np.where(epoch_temps <= Tc)
-            total_frozen_area_weekly[t] = compute_weighted_total(values=None, weights=grid_areas[indices_below_threshold])
-            global_temperature_weekly[t] = compute_weighted_total(values=epoch_temps[indices_below_threshold], weights=grid_areas[indices_below_threshold])
-        global_temperature_weekly /= total_area_earth_m2
+            total_frozen_area_per_epoch[t] = compute_weighted_total(values=None, weights=grid_areas[indices_below_threshold])
+            global_temperature_per_epoch[t] = compute_weighted_total(values=epoch_temps[indices_below_threshold], weights=grid_areas[indices_below_threshold])
+        global_temperature_per_epoch /= total_area_earth_m2
+
+        total_frozen_area_per_epoch = total_frozen_area_per_epoch.reshape(num_years, epochs_in_year)
+        global_temperature_per_epoch = global_temperature_per_epoch.reshape(num_years, epochs_in_year)
         # test_weighted_temp()
 
         # -------- 4. Compute yearly, seasonal and monthly averages
-        # yearly
-        total_frozen_area_yearly_avg =avg_over_num_epochs(input_vector=total_frozen_area_weekly, num_periods=num_years, epochs_in_period=epochs_in_year)
-        global_temperature_yearly_avg =avg_over_num_epochs(input_vector=global_temperature_weekly, num_periods=num_years, epochs_in_period=epochs_in_year)
+        # yearly average
+        total_frozen_area_yearly_avg =avg_over_num_epochs(input_vector=total_frozen_area_per_epoch, num_periods=num_years, epochs_in_period=epochs_in_year)
+        global_temperature_yearly_avg =avg_over_num_epochs(input_vector=global_temperature_per_epoch, num_periods=num_years, epochs_in_period=epochs_in_year)
 
         # seasonal average
         seasons_in_year = 4
         if epochs_in_year % seasons_in_year == 0:
-            total_frozen_area_seasonal_avg =avg_over_num_epochs(input_vector=total_frozen_area_weekly, num_periods=num_years*seasons_in_year, epochs_in_period=epochs_in_year/seasons_in_year, reshape=(num_years, seasons_in_year))
-            global_temperature_seasonal_avg =avg_over_num_epochs(input_vector=global_temperature_weekly, num_periods=num_years*seasons_in_year, epochs_in_period=epochs_in_year/seasons_in_year, reshape=(num_years, seasons_in_year))
+            total_frozen_area_seasonal_avg =avg_over_num_epochs(input_vector=total_frozen_area_per_epoch, num_periods=num_years * seasons_in_year, epochs_in_period=epochs_in_year / seasons_in_year, reshape=(num_years, seasons_in_year))
+            global_temperature_seasonal_avg =avg_over_num_epochs(input_vector=global_temperature_per_epoch, num_periods=num_years * seasons_in_year, epochs_in_period=epochs_in_year / seasons_in_year, reshape=(num_years, seasons_in_year))
         else:
             print(f'Number of epochs in year ({str(epochs_in_year)}) not divisible by 4 seasons. Seasonal average not computed.')
 
         # monthly average
         months_in_year = 12
         if epochs_in_year % months_in_year == 0:
-            total_frozen_area_monthly_avg =avg_over_num_epochs(input_vector=total_frozen_area_weekly, num_periods=num_years*months_in_year, epochs_in_period=epochs_in_year/months_in_year, reshape=(num_years, months_in_year))
-            global_temperature_monthly_avg =avg_over_num_epochs(input_vector=global_temperature_weekly, num_periods=num_years*months_in_year, epochs_in_period=epochs_in_year/months_in_year, reshape=(num_years, months_in_year))
+            total_frozen_area_monthly_avg =avg_over_num_epochs(input_vector=total_frozen_area_per_epoch, num_periods=num_years * months_in_year, epochs_in_period=epochs_in_year / months_in_year, reshape=(num_years, months_in_year))
+            global_temperature_monthly_avg =avg_over_num_epochs(input_vector=global_temperature_per_epoch, num_periods=num_years * months_in_year, epochs_in_period=epochs_in_year / months_in_year, reshape=(num_years, months_in_year))
         else:
             print(f'Number of epochs in year ({str(epochs_in_year)}) not divisible by 12 months. Monthly average not computed.')
+
 
 
 
@@ -221,19 +225,37 @@ if __name__ == '__main__':
 
 
 
-        np.savetxt('Tg_weekly.txt', Tg_weekly)
-        np.savetxt('Tg_annual.txt', Tg_annual)
-        np.savetxt('area_ice_weekly.txt', frozen_area_weekly_m2)
-        np.savetxt('area_ice_annual.txt', frozen_area_annual_m2)
+        np.savetxt('temp_global_per_epoch.txt', global_temperature_per_epoch)
+        np.savetxt('temp_global_monthly_avg.txt', global_temperature_monthly_avg) if epochs_in_year % months_in_year == 0 else None
+        np.savetxt('temp_global_seasonal_avg.txt', global_temperature_seasonal_avg) if epochs_in_year % seasons_in_year == 0 else None
+        np.savetxt('temp_global_yearly_avg.txt', global_temperature_yearly_avg)
+
+        np.savetxt('total_frozen_area_per_epoch.txt', total_frozen_area_per_epoch)
+        np.savetxt('total_frozen_area_monthly_avg.txt', total_frozen_area_monthly_avg) if epochs_in_year % months_in_year == 0 else None
+        np.savetxt('total_frozen_area_seasonal_avg.txt', total_frozen_area_seasonal_avg) if epochs_in_year % seasons_in_year == 0 else None
+        np.savetxt('total_frozen_area_yearly_avg.txt', total_frozen_area_yearly_avg)
 
     else:
         total_area_earth_m2 = total_earth_area()
-        Tg_weekly = np.loadtxt(processed_data_dir + 'Tg_weekly.txt')
-        Tg_annual = np.loadtxt(processed_data_dir + 'Tg_annual.txt')
-        frozen_area_weekly_m2 = np.loadtxt(processed_data_dir + 'area_ice_weekly.txt')
-        frozen_area_annual_m2 = np.loadtxt(processed_data_dir + 'area_ice_annual.txt')
+        global_temperature_per_epoch = np.loadtxt(processed_data_dir + 'temp_global_per_epoch.txt')
+        global_temperature_yearly_avg = np.loadtxt(processed_data_dir + 'temp_global_yearly_avg.txt')
+        total_frozen_area_per_epoch = np.loadtxt(processed_data_dir + 'total_frozen_area_per_epoch.txt')
+        total_frozen_area_yearly_avg = np.loadtxt(processed_data_dir + 'total_frozen_area_yearly_avg.txt')
+
+        try:
+            global_temperature_monthly_avg = np.loadtxt(processed_data_dir + 'temp_global_monthly_avg.txt')
+            total_frozen_area_monthly_avg = np.loadtxt(processed_data_dir + 'total_frozen_area_monthly_avg.txt')
+        except:
+            print('Monthly averages not available.')
+
+        try:
+            global_temperature_seasonal_avg = np.loadtxt(processed_data_dir + 'temp_global_seasonal_avg.txt')
+            total_frozen_area_seasonal_avg = np.loadtxt(processed_data_dir + 'total_frozen_area_seasonal_avg.txt')
+        except:
+            print('Seasonal averages not available.')
 
 
+    # todo: plot what available
     # if len(np.unique(temp)) == np.size(temp):   # all global temperatures are unique
     fig1, ax1 = plt.subplots(1, 2, figsize=(20, 7))
     ax1[0].plot(Tg_weekly, '.', markersize=4, linestyle='solid', linewidth=0.7)
