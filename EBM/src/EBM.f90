@@ -158,6 +158,9 @@ character(len=3):: months(12) = (/'jan','feb','mar','apr','may','jun',  &
 !------------------ Set Some Parameters ----------------------------------
 real,parameter::  RelErr = 2.0e-5   
 
+!-----------------  Input parameter for albedo switched on/off  ----------
+integer:: input_albedo_param = 1
+
 !------------------  variables for FMG solver  ---------------------------
 integer,dimension(NG):: nx, ny               
 real:: h(NG)                                 
@@ -213,7 +216,7 @@ initial_year=1950
 !CO2ppm=315.0 !21kaBP
 !initial_year=-21000
 
-Maxyrs = 99
+Maxyrs = 199
 FirstYr = Maxyrs
 
 !------------------------  Initialize some arrays  ----------------------- 
@@ -281,6 +284,9 @@ CALL Initial_Temp (Temp)
 CALL read_geography_0 (geography_0)      
 geography_updated =  geography_0
 
+!---- Read input if albedo time dependent yes or no ---- 
+print *, "Enter number if with (1) or without (0) albedo feedback:"
+read (*,*) input_albedo_param
 
 year = 1
 
@@ -351,22 +357,30 @@ DO yr = 1, Maxyrs
     end if
 
     !---- Nils added this ----
-    if (yr==1) then
-      F2 = SF 
-    else
-      CALL update_albedo_timestep (Pcoalbedo2, Temp, geography_0, geography_updated)
-      CALL HeatCapacities (HeatCap, geography_updated, tau_land, tau_snow, tau_sea_ice, &
-                   tau_mixed_layer, .FALSE.)
-      CALL FMG_Setup (nx, ny, h, geom, Heatcap, geography_updated, GCnp, GCsp) 
-      do j = 1, NY6
-        do i = 1, NX6
-          F2(i, j, tstep) = SF2(i, j, tstep) * Pcoalbedo2(i, j) - A
+    if (input_albedo_param == 1) then
+      if((yr==1).and.(tstep==1)) then
+        do j = 1, NY6
+          do i = 1, NX6
+            F2(i, j, 1) = SF(i, j, 1)
+          end do
         end do
-      end do
+      else
+        CALL update_albedo_timestep (Pcoalbedo2, Temp, geography_0, geography_updated)
+        !CALL HeatCapacities (HeatCap, geography_updated, tau_land, tau_snow, tau_sea_ice, &
+        !            tau_mixed_layer, .FALSE.)
+        !CALL FMG_Setup (nx, ny, h, geom, Heatcap, geography_updated, GCnp, GCsp) 
+        do j = 1, NY6
+          do i = 1, NX6
+            F2(i, j, tstep) = SF2(i, j, tstep) * Pcoalbedo2(i, j) - A
+            !print *, F2(i, j, tstep), F(i, j, tstep)
+          end do
+        end do
+      end if
+      F = F2
     end if
     !-------------------
 
-    CALL UpdateRHS (tstep, HeatCap, Temp, F2, rhs, LastRhs)
+    CALL UpdateRHS (tstep, HeatCap, Temp, F, rhs, LastRhs)
       
 !    CALL FMG_Solver (nx, ny, h, geom, GCnp, GCsp, Converged, rhs, Temp, .FALSE.)
       CALL FMG_Solver (nx, ny, h, geom, GCnp, GCsp, Converged, rhs, Temp, .FALSE.)
@@ -427,7 +441,7 @@ write (2,90) elapsed_time/60.
 90 format(/,' Elapsed time:',f10.2,' minutes') 
 
 call monthly_output
-call timesteps_output
+call timesteps_output (input_albedo_param)
 
 close (2)
 

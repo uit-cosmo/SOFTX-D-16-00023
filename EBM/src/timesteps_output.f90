@@ -1,15 +1,15 @@
 ! Outout the 48 time steps results into netcdf
 
-      subroutine timesteps_output
+      subroutine timesteps_output (input_albedo_param)
 
       implicit none
       include 'netcdf.inc'
 
+      integer:: input_albedo_param
 !     This is the name of the data file we will create.
       character*(*) FILE_NAME
       parameter (FILE_NAME = '../output/timesteps-output2.nc')
       integer ncid
-
       integer NDIMS 
       parameter (NDIMS = 4)
       integer NRECS, NLVS, NLATS, NLONS
@@ -88,7 +88,12 @@
       end do
 
 !     Create the file. 
-      retval = nf_create(FILE_NAME, nf_clobber, ncid)
+      if (input_albedo_param == 0) then
+            retval = nf_create('../output/timesteps-output_no_albedo.nc', nf_clobber, ncid) 
+      else if (input_albedo_param == 1) then 
+            retval = nf_create('../output/timesteps-output_albedo.nc', nf_clobber, ncid) 
+      end if 
+      
 
 !     Define the dimensions
       retval = nf_def_dim(ncid, LVL_NAME, NLVS, lvl_dimid)
