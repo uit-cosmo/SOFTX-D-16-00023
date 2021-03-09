@@ -8,7 +8,7 @@
 !     This is the name of the data file we will read.
       logical Albedo_2D
       character*(*) FILE_NAME
-      parameter (FILE_NAME='../input/albedo.nc')
+      parameter (FILE_NAME='../input/albedo_year_1.nc')
       integer ncid
       real error 
       parameter(error = 1.0e-10)
@@ -71,7 +71,6 @@
 !     Read the latitude and longitude data.
       retval = nf_get_var_real(ncid, lat_varid, lats)
       retval = nf_get_var_real(ncid, lon_varid, lons)
-      
 !     Check to make sure we got what we expected 
 !     The input netcdf should STRICTLY follow predefined lon-lat grid 
       do lat = 1, NLATS
