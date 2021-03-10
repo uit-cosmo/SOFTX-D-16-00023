@@ -6,6 +6,7 @@
 
 !     This is the name of the data file we will create.
       character*(*) FILE_NAME
+      !parameter (FILE_NAME = '../input/geo_year_1.nc')
       parameter (FILE_NAME = '../input/geography.nc')
       integer ncid
       real error 
