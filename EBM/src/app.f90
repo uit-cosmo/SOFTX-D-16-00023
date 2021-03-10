@@ -13,16 +13,19 @@ real::  sum, asum
 integer:: i, j, hem
 !---------------------------------------------------------------------
 ! Compute global mean of array
-
+  !print *, 'start'
       if (hem .eq. 0) then                       ! global
         sum = 0.0
+        asum = 0.0
         do j = 2, NY6-1                          ! non-pole points
           do i = 1, NX6
             sum = sum + area(j)*u(i,j)
+            asum = asum + area(j)
           end do
         end do
         sum = sum + area(1)*(u(1,1) + u(1,NY6))   ! pole points
         Global = sum 
+        !print *, asum + 2 *area(1)
       else if (hem .eq. 1) then                   ! northern hemisphere
         sum = 0.0
         asum = 0.0
@@ -35,6 +38,7 @@ integer:: i, j, hem
         sum = sum + area(1)*u(1,1)
         asum = asum + area(1)
         Global = sum/asum 
+        !print *, asum
       else if (hem .eq. 2) then                   ! southern hemisphere
         sum = 0.0
         asum = 0.0
@@ -48,6 +52,14 @@ integer:: i, j, hem
         asum = asum + area(NY6)
         Global = sum/asum 
       end if
+
+      ! open(212,file='area.dat')
+      ! do j=1, NY6
+      !   write(212,101) (area(j))
+      !   !print *, area(j)
+      ! 101 format(128e15.9)
+      ! end do
+      ! close(212)
 
 END FUNCTION
 
