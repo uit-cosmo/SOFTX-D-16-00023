@@ -216,7 +216,7 @@ initial_year=1950
 !CO2ppm=315.0 !21kaBP
 !initial_year=-21000
 
-Maxyrs = 199
+Maxyrs = 99
 FirstYr = Maxyrs
 
 !------------------------  Initialize some arrays  ----------------------- 
@@ -379,7 +379,9 @@ DO yr = 1, Maxyrs
       F = F2
     end if
     !-------------------
-
+    !CALL HeatCapacities (HeatCap, geography, tau_land, tau_snow, tau_sea_ice, &
+    !                tau_mixed_layer, .FALSE.)
+    !CALL FMG_Setup (nx, ny, h, geom, Heatcap, geography, GCnp, GCsp)
     CALL UpdateRHS (tstep, HeatCap, Temp, F, rhs, LastRhs)
       
 !    CALL FMG_Solver (nx, ny, h, geom, GCnp, GCsp, Converged, rhs, Temp, .FALSE.)
@@ -418,7 +420,7 @@ DO yr = 1, Maxyrs
         sum = 0.0            
       end if
     end if
-    GTemp =  GTemp  + Global (Temp, z(iaw(NG)), 0)     
+    GTemp =  GTemp  + Global (Temp, z(iaw(NG)), 1)     
     tscount = tscount + 1.0   
 
 	       
