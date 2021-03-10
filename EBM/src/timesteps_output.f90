@@ -12,8 +12,8 @@
 
       integer NDIMS 
       parameter (NDIMS = 4)
-      integer NRECS, NLVS, NLATS, NLONS
-      parameter (NRECS = 4752, NLVS=1, NLATS = 65, NLONS = 128)
+      integer NYRS, NRECS, NLVS, NLATS, NLONS
+      parameter (NYRS = 500, NRECS = NYRS*48, NLVS=1, NLATS = 65, NLONS = 128)    ! align Maxyrs in EBM.f90 file to NYRS
       character*(*) LVL_NAME, LAT_NAME, LON_NAME, REC_NAME
       parameter (LVL_NAME='level', LAT_NAME = 'latitude', LON_NAME = 'longitude')
       parameter (REC_NAME = 'time')
@@ -60,16 +60,11 @@
 
       integer ts, teller
       integer :: tellerto = 0
-    
-      character::  tsnum*2, BINfile*30, tellerstring*2
-    do teller = 2, 99
+      character::  tsnum*2, BINfile*30, tellerstring*4  ! tsnum - max digits in number of epochs in year, tellerstring - max digits in total number of years
+    do teller = 2, NYRS
         do ts = 1, 48
-         write (tsnum, '(i2)') ts
-         write (tellerstring, '(i2)') teller
-
-         if (ts < 10) tsnum(1:1) = '0'
-         if (teller < 10) tellerstring(1:1) = '0'
-
+         write (tsnum, '(i2.2)') ts
+         write (tellerstring, '(i4.4)') teller
          BINfile='../output/t'//tsnum//'.'//tellerstring//'.bin'
          open (unit=1, file=BINfile, status='old')
          read (1,*) temp
@@ -131,7 +126,7 @@
 !     Close the file. This causes netCDF to flush all buffers and make
 !     sure your data are really written to disk.
       retval = nf_close(ncid)
-      print *,'48 time steps temperature results stored successfully in ', FILE_NAME, '!'
-      write(2,*)'48 time steps temperature results stored successfully in ', FILE_NAME, '!'      
+      print *,NRECS,' time steps temperature results stored successfully in ', FILE_NAME, '!'
+      write(2,*)NRECS,' time steps temperature results stored successfully in ', FILE_NAME, '!'
       end
 

@@ -149,7 +149,7 @@ integer:: geography(NX6,NY6)
 integer:: i, j, l, n, yr, tstep, year, ts
 integer::  Maxyrs, mcount,nf
 logical:: Equilibrium 
-character:: datafile*40, step*2, YearChar*4, RunType*5, yearstring*2
+character:: datafile*40, step*2, YearChar*4, RunType*5, yearstring*4      ! step - max digits in number of epochs in year, yearstring - max digits in total number of years
 character(len=3):: months(12) = (/'jan','feb','mar','apr','may','jun',  &
                                   'jul','aug','sep','oct','nov','dec'/)
                                   
@@ -211,7 +211,7 @@ initial_year=1950
 !CO2ppm=315.0 !21kaBP
 !initial_year=-21000
 
-Maxyrs = 99
+Maxyrs = 500      ! align NYRS in timesteps_output.f09 file!
 FirstYr = Maxyrs
 
 !------------------------  Initialize some arrays  ----------------------- 
@@ -359,10 +359,8 @@ DO yr = 1, Maxyrs
 !---------------------    run time step data  ----------------------------
     !if (yr==Maxyrs.or.Equilibrium) then
     if (yr>1) then
-      write (step, '(i2)') tstep
-      write (yearstring, '(i2)') yr
-      if (tstep < 10) step(1:1) = '0'
-      if (yr < 10) yearstring(1:1) = '0'
+      write (step, '(i2.2)') tstep
+      write (yearstring, '(i4.4)') yr
       datafile = '../output/t'//step//'.'//yearstring//'.bin'
       open (unit=7, file=datafile, status='replace')            
       write (7,*) Temp
@@ -395,7 +393,7 @@ END DO
 if (.NOT.Equilibrium) then
   write (*,82) Maxyrs, AnnTemp
   write (2,82) Maxyrs, AnnTemp
-82 format (/,' WARNING: EQUILIBRIUM NOT REACHED AFTER ',i3,' YEARS!!!!', &
+82 format (/,' WARNING: EQUILIBRIUM NOT REACHED AFTER ',i4,' YEARS!!!!', &
           /,'         GLOBAL TEMPERATURE = ',f8.4)
 end if
 
