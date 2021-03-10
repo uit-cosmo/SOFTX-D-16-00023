@@ -16,7 +16,6 @@ def test_area_earth():
         print('Area is not approx. 1. \nTest failed!')
     
     
-    
 def save_area_array_numpy(): 
     area_pole, area_wo_poles = generate_area_array()
     np.savez('EBM/output/area_numpy', area_pole =  area_pole, area_wo_poles = area_wo_poles)

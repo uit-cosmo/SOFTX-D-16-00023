@@ -6,10 +6,10 @@ from netCDF4 import Dataset,num2date,date2num
 import matplotlib.animation as animation
 import sys
 
-dataset_no_albedo = '../FortranCode/EBM/output/timesteps-output_original.nc'
+dataset_master = '../FortranCode/EBM/output/timesteps-output_original.nc'
 dataset_no_albedo = '../FortranCode/EBM/output/timesteps-output_no_albedo.nc'
 dataset_albedo = '../FortranCode/EBM/output/timesteps-output_albedo.nc'
-dataset_master = '../FortranCode/EBM/output/timesteps-output2.nc'
+#dataset_master = '../FortranCode/EBM/output/timesteps-output2.nc'
 geography = np.genfromtxt('EBM/preprocess/geography_0.dat', dtype=int, delimiter=1)
 
 ny = 65
@@ -25,7 +25,7 @@ temp_no_albedo = T_no_albedo["temperature"]
 temp_master = T_master["temperature"]
 
 print(np.mean(temp_master[:,0,:,:], axis =(1,2))[100], np.mean(temp_no_albedo[:,0,:,:], axis =(1,2))[100])
-sys.exit()
+#sys.exit()
 fps = 48
 nSeconds = 20
 #fig, ax = plt.subplots()
