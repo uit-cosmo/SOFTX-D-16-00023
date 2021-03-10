@@ -44,6 +44,9 @@
                 geography_updated(i,j) = 5
                 !print *, "ocean"
             end if
+            if ((j.ge.50).and.(geo.eq.1)) then !Antarctica static as ice 
+                albedo(i,j)=0.70
+            end if
             Pcoalbedo(i, j) = 1.0 - albedo(i, j)
         end do
     end do
