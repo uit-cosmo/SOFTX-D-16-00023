@@ -178,14 +178,22 @@ def get_mid_pt_values_N(values_lat_lon, latitudes, longitudes):
     L = len(longitudes)
     K = len(latitudes)
     mid_values = np.empty((K-1, L))
-    for la in range(0, K-1):
-        for lo in range(0, L):
-            mid_values[la, lo] = (values_lat_lon[la,lo] + values_lat_lon[la+1,lo] + values_lat_lon[la, (lo+1)%L] + values_lat_lon[la+1,(lo+1)%L])/4
+    # # slow version
+    # for la in range(0, K-1):
+    #     for lo in range(0, L):
+    #         mid_values[la, lo] = (values_lat_lon[la,lo] + values_lat_lon[la+1,lo] + values_lat_lon[la, (lo+1)%L] + values_lat_lon[la+1,(lo+1)%L])/4
+    lat_wraparound_arr = np.empty((np.shape(values_lat_lon)[0], np.shape(values_lat_lon)[1]+1))
+    lat_wraparound_arr[:,0:-1] = values_lat_lon[:,:]
+    lat_wraparound_arr[:,-1] = values_lat_lon[:,0]
+    mid_values[:, :] = (lat_wraparound_arr[0:-1, 0:-1] + lat_wraparound_arr[1:, 0:-1] + lat_wraparound_arr[0:-1, 1:] +lat_wraparound_arr[1:, 1:]) / 4
+
     return mid_values
+
 
 def get_mid_pt_areas_N(arr_lat_lon):
     m = arr_lat_lon[:-1, :]
     return m
+
 
 # def temp_model_lat(lat_array, equator_pole_temp_diff=45, pole_temp=-20):
 #     '''Based on https://journals.ametsoc.org/view/journals/clim/26/18/jcli-d-12-00636.1.xml'''
@@ -198,8 +206,8 @@ if __name__ == '__main__':
     epochs_before_equinox = 11
     num_years = 500
     # raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output2.nc'
-    raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_albedo_noise_Nils.nc'
-    # raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_no_albedo_noise_Nils.nc'
+    # raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_albedo_noise_Nils.nc'
+    raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_no_albedo_noise_Nils.nc'
     result_savedir = './T_area/500yrs/'
     processed_data_dir = None # result_savedir
 
@@ -262,7 +270,7 @@ if __name__ == '__main__':
             epoch_temps = temps[t, 0, :, :]
 
             # avg temperatures to mid of grid, get corresponding areas # todo: this can always be more accurate!
-            epoch_temps = get_mid_pt_values_N(values_lat_lon=epoch_temps, latitudes=lats, longitudes=lons)  # issue: N-pole # todo: optimize by removing in one go - not changing much but slowing things down considerably
+            epoch_temps = get_mid_pt_values_N(values_lat_lon=epoch_temps, latitudes=lats, longitudes=lons)  # issue: N-pole
 
             # # avg_t = compute_weighted_total(values=epoch_temps, weights=grid_areas) / total_area_earth_m2
             indices_below_threshold = np.where(epoch_temps <= Tc)
