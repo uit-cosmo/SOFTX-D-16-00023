@@ -174,6 +174,19 @@ def test_total_area(lats, lons, temps, total_area_earth_m2):
     print(f'Sum of grid quads from lat, lon coordinates3: {area_grid/1e6} [km2]')
 
 
+def get_mid_pt_values_N(values_lat_lon, latitudes, longitudes):
+    L = len(longitudes)
+    K = len(latitudes)
+    mid_values = np.empty((K-1, L))
+    for la in range(0, K-1):
+        for lo in range(0, L):
+            mid_values[la, lo] = (values_lat_lon[la,lo] + values_lat_lon[la+1,lo] + values_lat_lon[la, (lo+1)%L] + values_lat_lon[la+1,(lo+1)%L])/4
+    return mid_values
+
+def get_mid_pt_areas_N(arr_lat_lon):
+    m = arr_lat_lon[:-1, :]
+    return m
+
 # def temp_model_lat(lat_array, equator_pole_temp_diff=45, pole_temp=-20):
 #     '''Based on https://journals.ametsoc.org/view/journals/clim/26/18/jcli-d-12-00636.1.xml'''
 #     return np.cos(lat_array)*equator_pole_temp_diff + pole_temp
@@ -184,7 +197,9 @@ if __name__ == '__main__':
     epochs_in_year = 48      # how to decompose first axis (e.g. 4752=48*99)
     epochs_before_equinox = 11
     num_years = 500
-    raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output2.nc'
+    # raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output2.nc'
+    raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_albedo_noise_Nils.nc'
+    # raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_no_albedo_noise_Nils.nc'
     result_savedir = './T_area/500yrs/'
     processed_data_dir = None # result_savedir
 
@@ -212,6 +227,7 @@ if __name__ == '__main__':
         temps = temps[:, :, :half_len, :]
         grid_areas = grid_areas[:half_len,:]
         total_area_earth_m2 /= 2
+
 
         # -------- 1. Align temperatures to spring equinox - this will loose some data! Update #years num_periods
         # # avg_t = compute_weighted_total(values=temps[0,0,:,:], weights=grid_areas) / total_area_earth_m2
@@ -241,8 +257,13 @@ if __name__ == '__main__':
         # todo: see fortran code how they do it app.f90 line 15 and on
         total_frozen_area_per_epoch = np.empty(epochs_in_year * num_years)
         global_temperature_per_epoch = np.empty(epochs_in_year * num_years)
+        grid_areas = get_mid_pt_areas_N(arr_lat_lon=grid_areas) # issue: N-pole
         for t in tqdm(range(0, epochs_in_year * num_years), position=0, leave=True):       # without progress bar: for t in range(0, epochs_in_period*num_periods):
             epoch_temps = temps[t, 0, :, :]
+
+            # avg temperatures to mid of grid, get corresponding areas # todo: this can always be more accurate!
+            epoch_temps = get_mid_pt_values_N(values_lat_lon=epoch_temps, latitudes=lats, longitudes=lons)  # issue: N-pole # todo: optimize by removing in one go - not changing much but slowing things down considerably
+
             # # avg_t = compute_weighted_total(values=epoch_temps, weights=grid_areas) / total_area_earth_m2
             indices_below_threshold = np.where(epoch_temps <= Tc)
             total_frozen_area_per_epoch[t] = compute_weighted_total(values=None, weights=grid_areas[indices_below_threshold])
