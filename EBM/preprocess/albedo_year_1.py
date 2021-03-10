@@ -19,10 +19,10 @@ def define_albedo_1st_year():
     albedo = np.zeros((48, ny,nx))
     temp_mask = np.zeros((ny,nx))
     for t in range(48): 
-        temp_mask[(temp[0*48 + t, :, :][0, :, :] <= -1) & (geography == 1)] = 1 # sea ice
-        temp_mask[(temp[0*48 + t, :, :][0, :, :] > -1) & (geography == 1)] = 0 # sea without ice
-        temp_mask[(temp[0*48 + t, :, :][0, :, :] <= -5) & (geography == 2)] = 1 # land ice
-        temp_mask[(temp[0*48 + t, :, :][0, :, :] > -5) & (geography == 2)] = 0 # land without ice
+        temp_mask[(temp[0*48 + t, :, :][0, :, :] <= -1) & (geography == 2)] = 1 # sea ice
+        temp_mask[(temp[0*48 + t, :, :][0, :, :] > -1) & (geography == 2)] = 0 # sea without ice
+        temp_mask[(temp[0*48 + t, :, :][0, :, :] <= -5) & (geography == 1)] = 1 # land ice
+        temp_mask[(temp[0*48 + t, :, :][0, :, :] > -5) & (geography == 1)] = 0 # land without ice
 
         # land without ice 
         albedo[t, (geography == 1) & (temp_mask == 0)] = 0.3 + 0.09 * legendre(np.where((geography == 1) & (temp_mask == 0))[0])
@@ -33,6 +33,17 @@ def define_albedo_1st_year():
         # ocean without ice 
         albedo[t, (geography == 2) & (temp_mask == 0)] = 0.29 + 0.09 * legendre(np.where((geography == 2) & (temp_mask == 0))[0])
     return albedo
+
+def define_geography_1st_year(): 
+    geo = np.zeros((ny,nx))
+    
+    geo[(temp[48, :, :][0, :, :] <= -1) & (geography == 2)] = 2 # sea ice
+    geo[(temp[48, :, :][0, :, :] > -1) & (geography == 2)] = 5 # sea without ice
+    geo[(temp[48, :, :][0, :, :] <= -5) & (geography == 1)] = 3 # land ice
+    geo[(temp[48, :, :][0, :, :] > -5) & (geography == 1)] = 1 # land without ice
+
+    return geo
+    
 
 def calculate_albedo(t, temperature): 
     albedo = np.zeros((ny, nx))
@@ -51,9 +62,9 @@ def calculate_albedo(t, temperature):
     albedo[(geography == 2) & (temp_mask == 0)] = 0.29 + 0.09 * legendre(np.where((geography == 2) & (temp_mask == 0))[0])
     return albedo
 albedo = define_albedo_1st_year()
+geo = define_geography_1st_year()
 
-
-def save_netCDF():
+def save_netCDF_albedo():
     
     nsteps = 48;
     unout = 'UNLIMITED'
@@ -79,5 +90,27 @@ def save_netCDF():
     
     ncout.close();
     
+def save_netCDF_geo():
     
-save_netCDF()
+    unout = 'UNLIMITED'
+
+    
+    ncout = Dataset('geo_year_1.nc','w','NETCDF4'); 
+    ncout.createDimension('latitude',ny)
+    ncout.createDimension('longitude',nx)
+    
+    latvar = ncout.createVariable('latitude','float32',('latitude'));
+    latvar.setncattr('units','degrees_north')
+    latvar[:] = np.array(lat)
+
+    lonvar = ncout.createVariable('longitude','float32',('longitude'));
+    lonvar.setncattr('units','degrees_east')
+    lonvar[:] = np.array(lon)
+    
+    myvar = ncout.createVariable('landmask','float32',('latitude', 'longitude'));myvar.setncattr('units','landmask: 1. land;  2. sea ice; 3. land ice; 5 ocean. ');
+    myvar[:] = geo;
+    
+    ncout.close();  
+save_netCDF_geo()
+
+save_netCDF_albedo()
