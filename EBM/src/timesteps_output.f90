@@ -12,13 +12,13 @@
       integer ncid
       integer NDIMS 
       parameter (NDIMS = 4)
-      integer NRECS, NLVS, NLATS, NLONS
-      parameter (NRECS = 4752, NLVS=1, NLATS = 65, NLONS = 128)
+      integer NYEARS, NRECS, NLVS, NLATS, NLONS
+      parameter ( NYEARS = 500, NRECS = NYEARS*48, NLVS=1, NLATS = 65, NLONS = 128)
       character*(*) LVL_NAME, LAT_NAME, LON_NAME, REC_NAME
       parameter (LVL_NAME='level', LAT_NAME = 'latitude', LON_NAME = 'longitude')
       parameter (REC_NAME = 'time')
       integer lvl_dimid, lon_dimid, lat_dimid, rec_dimid
-
+       
 !     The start and count arrays will tell the netCDF library where to
 !     write our data.
       integer start(NDIMS), count(NDIMS)
@@ -61,21 +61,18 @@
       integer ts, teller
       integer :: tellerto = 0
     
-      character::  tsnum*2, BINfile*30, tellerstring*2
-    do teller = 2, 99
+      character::  tsnum*2, BINfile*30, tellerstring*4
+    do teller = 2, NYEARS
         do ts = 1, 48
-         write (tsnum, '(i2)') ts
-         write (tellerstring, '(i2)') teller
+            write (tsnum, '(i2.2)') ts
+            write (tellerstring, '(i4.4)') teller
 
-         if (ts < 10) tsnum(1:1) = '0'
-         if (teller < 10) tellerstring(1:1) = '0'
-
-         BINfile='../output/t'//tsnum//'.'//tellerstring//'.bin'
-         open (unit=1, file=BINfile, status='old')
-         read (1,*) temp
-         close (1,status='delete')
-         tellerto = tellerto + 1
-         temp_out(:,:,NLVS,tellerto) = temp(:,:)
+            BINfile='../output/t'//tsnum//'.'//tellerstring//'.bin'
+            open (unit=1, file=BINfile, status='old')
+            read (1,*) temp
+            close (1,status='delete')
+            tellerto = tellerto + 1
+            temp_out(:,:,NLVS,tellerto) = temp(:,:)
       end do
     end do
 
@@ -136,7 +133,7 @@
 !     Close the file. This causes netCDF to flush all buffers and make
 !     sure your data are really written to disk.
       retval = nf_close(ncid)
-      print *,'48 time steps temperature results stored successfully in ', FILE_NAME, '!'
-      write(2,*)'48 time steps temperature results stored successfully in ', FILE_NAME, '!'      
+      print *,NRECS, ' time steps temperature results stored successfully in ', FILE_NAME, '!'
+      write(2,*), NRECS,' time steps temperature results stored successfully in ', FILE_NAME, '!'      
       end
 
