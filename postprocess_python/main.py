@@ -71,18 +71,17 @@ def align_year_vernal_eqx(data, epochs_in_year=48, e_in_y_before_vernal_eqx=11, 
     Dec    34, 35, 36, 37'''
 
     # remove first 37 and last 11 - so we loose 1 yr
-    aligned_data = data[epochs_in_year - e_in_y_before_vernal_eqx:-e_in_y_before_vernal_eqx, :, :, :]
+    aligned_data = data[epochs_in_year - e_in_y_before_vernal_eqx:-e_in_y_before_vernal_eqx, :, :, :]   # starting from 1 Jan of first full year
     if remove_trailing0_y:
         while np.all(aligned_data[-1,:,:,:] == 0.0): # aligned_data[-1] == 0.0:
             aligned_data = aligned_data[:np.shape(aligned_data)[0] - epochs_in_year, :, :, :]
-        # aligned = aligned[:len(aligned)-epochs_in_period]
     return aligned_data
 
 
 def compute_weighted_total(values, weights):
-    if values == None:
+    if values is None:
         values = np.ones(np.shape(weights))
-    elif weights == None:
+    elif weights is None:
         weights = np.ones(np.shape(values))
     return np.sum(values*weights)
 
@@ -95,6 +94,56 @@ def avg_over_num_epochs(input_vector, num_periods, epochs_in_period, reshape=Non
             return input_vector_period_avg.reshape(reshape)
         else:
             return input_vector_period_avg
+
+
+def plot_subplot(ax, x_vec, y_vec, title, xlbl, ylbl, linestyle='solid'):
+    ax.plot(x_vec, y_vec, '.', markersize=4, linestyle=linestyle, linewidth=0.7)
+    ax.set(title=title)
+    ax.set_xlabel(xlbl)
+    ax.set_ylabel(ylbl)
+
+def plot_area_vs_temp_subpl(temp_2D__YbyTotalSubplots, area_2D__YbyTotalSubplots, subplot_rows, subplot_cols, figsize, global_title, titles, xlabels, ylabels, linestyle, fig_savepath):
+    '''Plot in subplots.
+    in 2D arrays:
+        #cols == total number of subplots == subplot_rows*subplot_cols,
+              == len of titles, xlabels, ylabels
+        #rows == #points to plot in each plot.
+    '''
+    if fig_savepath is not None:
+        plt.ioff()
+
+    fig, ax = plt.subplots(subplot_rows, subplot_cols, figsize=figsize)
+    fig.suptitle(global_title, fontsize=14)
+
+    for r in range(0, subplot_rows):
+        for c in range(0, subplot_cols):
+            record = r*subplot_cols+c
+            plot_subplot(ax=ax[r,c], x_vec=temp_2D__YbyTotalSubplots[:,record], y_vec=area_2D__YbyTotalSubplots[:,record], title=titles[record], xlbl=xlabels[record], ylbl=ylabels[record], linestyle=linestyle)
+
+    if fig_savepath is not None:
+        plt.savefig(fig_savepath)
+    else:
+        plt.show(block=False)
+
+def plot_temp_vs_time_and_area_vs_temp(temp_1D, area_1D, figsize, titles_2, xlabels_2, ylabels_2, linestyles_2, fig_savepath):
+    if fig_savepath is not None:
+        plt.ioff()
+
+    fig, ax = plt.subplots(1, 2, figsize=figsize)
+
+    ax[0].plot(temp_1D, '.', markersize=4, linestyle=linestyles_2[0], linewidth=0.7)
+    ax[0].set(title=titles_2[0])
+    ax[0].set_xlabel(xlabels_2[0])
+    ax[0].set_ylabel(ylabels_2[0])
+    ax[1].plot(temp_1D, area_1D, '.', markersize=4, linestyle=linestyles_2[1], linewidth=0.7)
+    ax[1].set(title=titles_2[1])
+    ax[1].set_xlabel(xlabels_2[1])
+    ax[1].set_ylabel(ylabels_2[1])
+
+    if fig_savepath is not None:
+        plt.savefig(fig_savepath)
+    else:
+        plt.show(block=False)
 
 
 def test_weighted_temp():
@@ -135,8 +184,9 @@ if __name__ == '__main__':
     epochs_in_year = 48      # how to decompose first axis (e.g. 4752=48*99)
     epochs_before_equinox = 11
     num_years = 500
-    processed_data_dir = None # './T_area/2/' # './1_supressed_albedo/' # None
-    raw_data_file_path = '../EBM/output/500yrs' + 'timesteps-output2.nc'
+    raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output2.nc'
+    result_savedir = './T_area/500yrs/'
+    processed_data_dir = None # result_savedir
 
     if processed_data_dir is None and raw_data_file_path is None:
         raise ValueError('Need input.')
@@ -161,11 +211,14 @@ if __name__ == '__main__':
         lats = lats[:half_len]
         temps = temps[:, :, :half_len, :]
         grid_areas = grid_areas[:half_len,:]
-
+        total_area_earth_m2 /= 2
 
         # -------- 1. Align temperatures to spring equinox - this will loose some data! Update #years num_periods
-        temps = align_year_vernal_eqx(data=temps, epochs_in_year=epochs_in_year, e_in_y_before_vernal_eqx=epochs_before_equinox,
-                                      remove_trailing0_y=True)  # year starts in March, at equinox
+        # # avg_t = compute_weighted_total(values=temps[0,0,:,:], weights=grid_areas) / total_area_earth_m2
+        temps = align_year_vernal_eqx(data=temps, epochs_in_year=epochs_in_year, e_in_y_before_vernal_eqx=epochs_before_equinox,remove_trailing0_y=True)  # year starts in March, at equinox
+        # # avg_t = compute_weighted_total(values=temps[0,0,:,:], weights=grid_areas) / total_area_earth_m2
+        # # last_line = temps[-1,0,:,:]
+        # # tg_last_line = compute_weighted_total(values=last_line, weights=grid_areas) / total_area_earth_m2
         num_years = np.shape(temps)[0] / epochs_in_year
         if not num_years.is_integer():
             raise ValueError(f"Number of full years ({num_years:1.5f}) seems to be not an integer number. Something went wrong.")
@@ -190,10 +243,13 @@ if __name__ == '__main__':
         global_temperature_per_epoch = np.empty(epochs_in_year * num_years)
         for t in tqdm(range(0, epochs_in_year * num_years), position=0, leave=True):       # without progress bar: for t in range(0, epochs_in_period*num_periods):
             epoch_temps = temps[t, 0, :, :]
+            # # avg_t = compute_weighted_total(values=epoch_temps, weights=grid_areas) / total_area_earth_m2
             indices_below_threshold = np.where(epoch_temps <= Tc)
             total_frozen_area_per_epoch[t] = compute_weighted_total(values=None, weights=grid_areas[indices_below_threshold])
-            global_temperature_per_epoch[t] = compute_weighted_total(values=epoch_temps[indices_below_threshold], weights=grid_areas[indices_below_threshold])
+            global_temperature_per_epoch[t] = compute_weighted_total(values=epoch_temps, weights=grid_areas)
+            # # avg_t = global_temperature_per_epoch[t]
         global_temperature_per_epoch /= total_area_earth_m2
+        # # avg_t = global_temperature_per_epoch[-1]
 
         total_frozen_area_per_epoch__2D_YbyE = total_frozen_area_per_epoch.reshape(num_years, epochs_in_year)
         global_temperature_per_epoch__2D_YbyE = global_temperature_per_epoch.reshape(num_years, epochs_in_year)
@@ -203,20 +259,23 @@ if __name__ == '__main__':
         # yearly average
         total_frozen_area_yearly_avg__1D_Y =avg_over_num_epochs(input_vector=total_frozen_area_per_epoch__2D_YbyE, num_periods=num_years, epochs_in_period=epochs_in_year)         # colapses 2nd dimension into 1, can reshape if needed
         global_temperature_yearly_avg__1D_Y =avg_over_num_epochs(input_vector=global_temperature_per_epoch__2D_YbyE, num_periods=num_years, epochs_in_period=epochs_in_year)
+        # # avg_t = global_temperature_yearly_avg__1D_Y[-1]
 
-        # seasonal average
-        seasons_in_year = 4
-        if epochs_in_year % seasons_in_year == 0:
-            total_frozen_area_seasonal_avg__2D_YbyS = avg_over_num_epochs(input_vector=total_frozen_area_per_epoch__2D_YbyE, num_periods=num_years * seasons_in_year, epochs_in_period=epochs_in_year / seasons_in_year, reshape=(num_years, seasons_in_year))
-            global_temperature_seasonal_avg__2D_YbyS = avg_over_num_epochs(input_vector=global_temperature_per_epoch__2D_YbyE, num_periods=num_years * seasons_in_year, epochs_in_period=epochs_in_year / seasons_in_year, reshape=(num_years, seasons_in_year))
-        else:
-            print(f'Number of epochs in year ({str(epochs_in_year)}) not divisible by 4 seasons. Seasonal average not computed.')
+
+        # # seasonal average - works, but seasons are not nicely aligned to year, so it requires extra back-aligning to equinox - todo if needed
+        # seasons_in_year = 4
+        # if epochs_in_year % seasons_in_year == 0:
+        #     total_frozen_area_seasonal_avg__2D_YbyS = avg_over_num_epochs(input_vector=total_frozen_area_per_epoch__2D_YbyE, num_periods=num_years * seasons_in_year, epochs_in_period=int(epochs_in_year / seasons_in_year), reshape=(num_years, seasons_in_year))
+        #     global_temperature_seasonal_avg__2D_YbyS = avg_over_num_epochs(input_vector=global_temperature_per_epoch__2D_YbyE, num_periods=num_years * seasons_in_year, epochs_in_period=int(epochs_in_year / seasons_in_year), reshape=(num_years, seasons_in_year))
+        # else:
+        #     print(f'Number of epochs in year ({str(epochs_in_year)}) not divisible by 4 seasons. Seasonal average not computed.')
+
 
         # monthly average
         months_in_year = 12
         if epochs_in_year % months_in_year == 0:
-            total_frozen_area_monthly_avg__2D_YbyM = avg_over_num_epochs(input_vector=total_frozen_area_per_epoch__2D_YbyE, num_periods=num_years * months_in_year, epochs_in_period=epochs_in_year / months_in_year, reshape=(num_years, months_in_year))
-            global_temperature_monthly_avg__2D_YbyM = avg_over_num_epochs(input_vector=global_temperature_per_epoch__2D_YbyE, num_periods=num_years * months_in_year, epochs_in_period=epochs_in_year / months_in_year, reshape=(num_years, months_in_year))
+            total_frozen_area_monthly_avg__2D_YbyM = avg_over_num_epochs(input_vector=total_frozen_area_per_epoch__2D_YbyE, num_periods=num_years * months_in_year, epochs_in_period=int(epochs_in_year / months_in_year), reshape=(num_years, months_in_year))
+            global_temperature_monthly_avg__2D_YbyM = avg_over_num_epochs(input_vector=global_temperature_per_epoch__2D_YbyE, num_periods=num_years * months_in_year, epochs_in_period=int(epochs_in_year / months_in_year), reshape=(num_years, months_in_year))
         else:
             print(f'Number of epochs in year ({str(epochs_in_year)}) not divisible by 12 months. Monthly average not computed.')
 
@@ -226,18 +285,18 @@ if __name__ == '__main__':
                         # subtract it from each consecutive epoch
 
 
-        np.savetxt('temp_global_per_epoch.txt', global_temperature_per_epoch__2D_YbyE)
-        np.savetxt('temp_global_monthly_avg.txt', global_temperature_monthly_avg__2D_YbyM) if epochs_in_year % months_in_year == 0 else None
-        np.savetxt('temp_global_seasonal_avg.txt', global_temperature_seasonal_avg__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None
-        np.savetxt('temp_global_yearly_avg.txt', global_temperature_yearly_avg__1D_Y)
+        np.savetxt(result_savedir + 'temp_global_per_epoch.txt', global_temperature_per_epoch__2D_YbyE)
+        np.savetxt(result_savedir + 'temp_global_monthly_avg.txt', global_temperature_monthly_avg__2D_YbyM) if epochs_in_year % months_in_year == 0 else None
+        # np.savetxt(result_savedir + 'temp_global_seasonal_avg.txt', global_temperature_seasonal_avg__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None # todo if needed
+        np.savetxt(result_savedir + 'temp_global_yearly_avg.txt', global_temperature_yearly_avg__1D_Y)
 
-        np.savetxt('total_frozen_area_per_epoch__2D_YbyE.txt', total_frozen_area_per_epoch__2D_YbyE)
-        np.savetxt('total_frozen_area_monthly_avg__2D_YbyM.txt', total_frozen_area_monthly_avg__2D_YbyM) if epochs_in_year % months_in_year == 0 else None
-        np.savetxt('total_frozen_area_seasonal_avg__2D_YbyS.txt', total_frozen_area_seasonal_avg__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None
-        np.savetxt('total_frozen_area_yearly_avg__1D_Y.txt', total_frozen_area_yearly_avg__1D_Y)
+        np.savetxt(result_savedir + 'total_frozen_area_per_epoch__2D_YbyE.txt', total_frozen_area_per_epoch__2D_YbyE)
+        np.savetxt(result_savedir + 'total_frozen_area_monthly_avg__2D_YbyM.txt', total_frozen_area_monthly_avg__2D_YbyM) if epochs_in_year % months_in_year == 0 else None
+        # np.savetxt(result_savedir + 'total_frozen_area_seasonal_avg__2D_YbyS.txt', total_frozen_area_seasonal_avg__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None # todo if needed
+        np.savetxt(result_savedir + 'total_frozen_area_yearly_avg__1D_Y.txt', total_frozen_area_yearly_avg__1D_Y)
 
     else:
-        total_area_earth_m2 = total_earth_area()
+        total_area_earth_m2 = total_earth_area() / 2
         global_temperature_per_epoch__2D_YbyE = np.loadtxt(processed_data_dir + 'temp_global_per_epoch.txt')
         global_temperature_yearly_avg__1D_Y = np.loadtxt(processed_data_dir + 'temp_global_yearly_avg.txt')
         total_frozen_area_per_epoch__2D_YbyE = np.loadtxt(processed_data_dir + 'total_frozen_area_per_epoch__2D_YbyE.txt')
@@ -260,92 +319,35 @@ if __name__ == '__main__':
             print('Seasonal averages not available.')
 
 
-    def plot_subplot(ax, x_vec, y_vec, title, xlbl, ylbl, linestyle='solid'):
-        ax.plot(x_vec, y_vec, '.', markersize=4, linestyle=linestyle, linewidth=0.7)
-        ax.set(title=title)
-        ax.set_xlabel(xlbl)
-        ax.set_ylabel(ylbl)
-
-    def plot_area_vs_temp_subpl(temp_2D__YbyTotalSubplots, area_2D__YbyTotalSubplots, subplot_rows, subplot_cols, figsize, titles, xlabels, ylabels, linestyle, fig_savepath):
-        '''Plot in subplots.
-        in 2D arrays:
-            #cols == total number of subplots == subplot_rows*subplot_cols,
-                  == len of titles, xlabels, ylabels
-            #rows == #points to plot in each plot.
-        '''
-        fig, ax = plt.subplots(subplot_rows, subplot_cols, figsize)
-
-        for r in range(0, subplot_rows):
-            for c in range(0, subplot_cols):
-                record = r*subplot_cols+c
-                plot_subplot(ax=ax[r,c], x_vec=temp_2D__YbyTotalSubplots[:,record], y_vec=area_2D__YbyTotalSubplots[:,record], title=titles[record], xlbl=xlabels[record], ylbl=ylabels[record], linestyle=linestyle)
-
-        plt.savefig(fig_savepath) if fig_savepath is None else None
-
-    def plot_temp_and_area_vs_temp(temp_1D, area_1D, figsize, titles_2, xlabels_2, ylabels_2, linestyles_2, fig_savepath):
-        fig, ax = plt.subplots(1, 2, figsize)
-
-        ax1[0].plot(temp_1D, '.', markersize=4, linestyle=linestyles_2[0], linewidth=0.7)
-        ax1[0].set(title=titles_2[0])
-        ax1[0].set_xlabel(xlabels_2[0])
-        ax1[0].set_ylabel(ylabels_2[0])
-        ax1[1].plot(temp_1D, area_1D, '.', markersize=4, linestyle=linestyles_2[1], linewidth=0.7)
-        ax1[1].set(title=titles_2[1])
-        ax1[1].set_xlabel(xlabels_2[1])
-        ax1[1].set_ylabel(ylabels_2[1])
-        plt.savefig(fig_savepath) if fig_savepath is None else None
+    # 12 months - montly average
+    titles = np.array(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'])
+    xlabels = np.full(months_in_year, r'$T_g$')
+    ylabels = np.full(months_in_year, r'Area(Tg) [$10^6\;km^2$]')
+    plot_area_vs_temp_subpl(temp_2D__YbyTotalSubplots=global_temperature_monthly_avg__2D_YbyM,
+                            area_2D__YbyTotalSubplots=total_frozen_area_monthly_avg__2D_YbyM/(1e6*1e6),
+                            subplot_rows=3, subplot_cols=4, figsize=(20,12), global_title='Ice area (avg in months)',
+                            titles=titles, xlabels=xlabels, ylabels=ylabels, linestyle=' ', fig_savepath=result_savedir + 'Tg-area_months')
 
 
-    # todo: scatter for other than yearly
-
-    # plot_area_vs_temp(temp_2D=, area_2D=, subplot_rows=, subplot_cols=, figsize=, titles=, xlabel=, ylabel=, fig_savepath=)
-    titles = np.array([])
-    plot_area_vs_temp_subpl(x_2D=global_temperature_seasonal_avg__2D_YbyS, y_2D=total_frozen_area_seasonal_avg__2D_YbyS,
-                      subplot_rows=1, subplot_cols=2, figsize=(18,6), titles=, xlabel=, ylabel=, fig_savepath=)
-
-
-
+    # --- Plot Tg, and Area(Tg)
     # by epoch
-    plot_temp_and_area_vs_temp(temp_1D=np.matrix.flatten(global_temperature_per_epoch__2D_YbyE), area_1D=np.matrix.flatten(total_frozen_area_per_epoch__2D_YbyE),
-                               figsize=(18,7), titles_2=np.array(['Global temperature (by epoch)', 'Ice area (by epoch)']),
-                               xlabels_2, ylabels_2, linestyles_2=np.array(['solid',' ']), fig_savepath)
+    plot_temp_vs_time_and_area_vs_temp(temp_1D=np.matrix.flatten(global_temperature_per_epoch__2D_YbyE), area_1D=np.matrix.flatten(total_frozen_area_per_epoch__2D_YbyE) / (1e6 * 1e6),
+                                       figsize=(18,7), titles_2=np.array(['Global temperature (by epoch)', 'Ice area (by epoch)']),
+                                       xlabels_2=np.array([r'$1/48^{th}$ of yr', r'$T_g$']), ylabels_2=np.array([r'$T_g$', r'Area(Tg) [$10^6\;km^2$]']),
+                                       linestyles_2=np.array(['solid',' ']), fig_savepath=result_savedir + 'Tg_Tg-area_epochs')
     # avg by monthly window - not plotted
     # avg by seasonal window - not plotted
     # avg by yearly window
-    plot_temp_and_area_vs_temp(temp_1D=np.matrix.flatten(global_temperature_yearly_avg__1D_Y), area_1D=np.matrix.flatten(total_frozen_area_yearly_avg__1D_Y),
-                               figsize=(18,7), titles_2np.array(['Global temperature (yearly avg window)', 'Ice area (yearly avg window)']),
-                               xlabels_2, ylabels_2, linestyles_2=np.array(['solid','solid']), fig_savepath)
+    plot_temp_vs_time_and_area_vs_temp(temp_1D=np.matrix.flatten(global_temperature_yearly_avg__1D_Y), area_1D=np.matrix.flatten(total_frozen_area_yearly_avg__1D_Y) / (1e6 * 1e6),
+                                       figsize=(18,7), titles_2=np.array(['Global temperature (yearly avg window)', 'Ice area (yearly avg window)']),
+                                       xlabels_2=np.array([r'yr', r'$T_g$']), ylabels_2=np.array([r'$T_g$', r'Area(Tg) [$10^6\;km^2$]']),
+                                       linestyles_2=np.array(['solid','solid']), fig_savepath=result_savedir + 'Tg_Tg-area_yearly-avgs')
 
-    # todo: plot what available, sure where 1st epoch starts (january or spring?)
-    # if len(np.unique(temp)) == np.size(temp):   # all global temperatures are unique
-    fig1, ax1 = plt.subplots(1, 2, figsize=(20, 7))
-    ax1[0].plot(Tg_weekly, '.', markersize=4, linestyle='solid', linewidth=0.7)
-    ax1[0].set(title='Temperature global (weekly)')
-    ax1[0].set_xlabel(r'$1/48^{th}$ of yr')
-    ax1[0].set_ylabel(r'$T_g$')
-    # ax1[1].plot(Tg_weekly, frozen_area_weekly_m2 /1e6, '.', markersize=4, linestyle='solid', linewidth=0.7)
-    ax1[1].plot(Tg_weekly, frozen_area_weekly_m2 /(1e6*1e6), '.', markersize=4, linestyle='solid', linewidth=0.7)
-    # ax1[1].plot(Tg_weekly, frozen_area_weekly_m2 / total_area_earth_m2 * 100, '.', markersize=4, linestyle='solid', linewidth=0.7)
-    ax1[1].set(title='Ice area (weekly)')
-    ax1[1].set_xlabel(r'$T_g$')
-    # ax1[1].set_ylabel(r'Area(Tg) [$km^2$]')
-    ax1[1].set_ylabel(r'Area(Tg) [$10^6\;km^2$]')
-    # ax1[1].set_ylabel(r'Area(Tg) [%Earth surface]')
-    plt.savefig('weekly.png') if processed_data_dir is None else None
+    # # # ax2[1].plot(Tg_annual, frozen_area_annual_m2 /1e6, '.', markersize=4, linestyle='solid', linewidth=0.7)
+    # # ax2[1].plot(Tg_annual, frozen_area_annual_m2 /(1e6*1e6), '.', markersize=4, linestyle='solid', linewidth=0.7)
+    # # # ax1[1].set_ylabel(r'Area(Tg) [$km^2$]')
+    # # ax1[1].set_ylabel(r'Area(Tg) [$10^6\;km^2$]')
 
-    fig2, ax2 = plt.subplots(1, 2, figsize=(20, 7))
-    ax2[0].plot(Tg_annual, '.', markersize=4, linestyle='solid', linewidth=0.7)
-    ax2[0].set(title='Temperature global (annual)')
-    ax2[0].set_xlabel(r'yr')
-    ax2[0].set_ylabel(r'$T_g$')
-    # ax2[1].plot(Tg_annual, frozen_area_annual_m2 /1e6, '.', markersize=4, linestyle='solid', linewidth=0.7)
-    ax2[1].plot(Tg_annual, frozen_area_annual_m2 /(1e6*1e6), '.', markersize=4, linestyle='solid', linewidth=0.7)
-    # ax2[1].plot(Tg_annual, frozen_area_annual_m2 / total_area_earth_m2 * 100, '.', markersize=4, linestyle='solid', linewidth=0.7)
-    ax2[1].set(title='Ice area (annual)')
-    ax2[1].set_xlabel(r'$T_g$')
-    # ax2[1].set_ylabel(r'Area(Tg) [$km^2$]')
-    ax2[1].set_ylabel(r'Area(Tg) [$10^6\;km^2$]')
-    # ax2[1].set_ylabel(r'Area(Tg) [%Earth surface]')
-    plt.savefig('annual.png') if processed_data_dir is None else None
+
 
     plt.show(block=True)
