@@ -18,8 +18,11 @@ subroutine A_value(CO2ppm,A)
       real CO2ppm, A
       real CO2_Base, A_Base
       parameter(CO2_Base=315.0, A_Base=210.3)
-      
-      A=A_Base-5.35*log(CO2ppm/CO2_Base)
-      
+      real:: rand_float 
+      integer:: stdv = 10
+      CALL RANDOM_NUMBER(rand_float)
+      A=A_Base-5.35*log(CO2ppm/CO2_Base)  + (stdv * rand_float - stdv/2)
+
+      !print *, A
       return
 end subroutine A_value
