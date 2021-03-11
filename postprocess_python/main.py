@@ -18,7 +18,7 @@ def next_lat(latitudes, idx):
     # return latitudes[idx+1] if idx + 1 < len(latitudes) else None   # not wrap latitude, as good as the above
 
 def get_lower_right_quad_vertices(latitudes, longitudes, idx_lat, idx_lon):
-    # todo: see comment in Zhuang Fortran EBM.f90 about how grid is structured, vs what netcdf dump shows (discrepancy)
+    # note: see comment in Zhuang Fortran EBM.f90 about how grid is structured, vs what netcdf dump shows (discrepancy)
     # todo: as of now south pole not included anywhere (total area of lat -90 is zero), because there is nothing more south to take.
     #       and the north pole decides all adjacent quadrants :/. Maybe interpolate the values at grid potint to middle of grids and compute further from those...
     return latitudes[idx_lat], next_lat(latitudes, idx_lat), longitudes[idx_lon], next_lon(longitudes, idx_lon)
@@ -37,21 +37,21 @@ def area_quads_sphere(latitudes, longitudes, indices_lat, indices_lon):
     return np.sum(areas)  # in m2
 
 
-def compute_sphere_grid_areas(latitude_coord, longitude_coord):
-    # todo: could optimize furhter by computing one longitude strip and using for all
+def compute_sphere_grid_areas_midpoints(latitude_coord, longitude_coord):
+    # note: could optimize furhter by computing one longitude strip and using for all
     num_lats = len(latitude_coord)
     num_lons = len(longitude_coord)
     areas = np.empty((num_lats, num_lons))
     for lat in range(0,num_lats):
         for lon in range(0, num_lons):
             areas[lat, lon] = area_1quad_sphere(*get_lower_right_quad_vertices(latitude_coord, longitude_coord, lat, lon))
-    return areas
+    return areas[:-1, :] # removing last row (south pole) with zeros (areas for which south pole is upper left corner are equal to zero)
 
 
-def total_earth_area():
+def total_earth_area_m2():
     obj = {'type': 'Polygon',
            'coordinates': [[[-180, -90], [-180, 90], [180, 90], [180, -90], [-180, -90]]]}  # full earth area
-    return area(obj)  # in km2
+    return area(obj)  # in m2
 
 
 def align_year_vernal_eqx(data, epochs_in_year=48, e_in_y_before_vernal_eqx=11, remove_trailing0_y=True):
@@ -166,33 +166,31 @@ def test_total_area(lats, lons, temps, total_area_earth_m2):
     idc_whole_earth_1st_epoch = np.where(T_all[0] == 0)  # first epoch
     area_earth = area_quads_sphere(latitudes=lats, longitudes=lons, indices_lat=(T_all[2])[idc_whole_earth_1st_epoch],
                                    indices_lon=(T_all[3])[idc_whole_earth_1st_epoch])
-    area_grid = np.sum(compute_sphere_grid_areas(latitude_coord=lats, longitude_coord=lons))
+    area_grid = np.sum(compute_sphere_grid_areas_midpoints(latitude_coord=lats, longitude_coord=lons))
     print('Total earth area various ways:')
-    print(f'Polygon +-180, +-90:                          {total_earth_area()/1e6} [km2]')
+    print(f'Polygon +-180, +-90:                          {total_earth_area_m2() / 1e6} [km2]')
     print(f'Sum of grid quads from lat, lon coordinates1: {area_earth / 1e6} [km2]')
     print(f'Sum of grid quads from lat, lon coordinates2: {total_area_earth_m2/1e6} [km2]')
     print(f'Sum of grid quads from lat, lon coordinates3: {area_grid/1e6} [km2]')
 
 
-def get_mid_pt_values_N(values_lat_lon, latitudes, longitudes):
-    L = len(longitudes)
+def get_midpoint_values(values_lat_lon, latitudes, longitudes):
     K = len(latitudes)
+    L = len(longitudes)
+    if K != np.shape(values_lat_lon)[0] or L != np.shape(values_lat_lon)[1]:
+        raise ValueError('Mismatch in latitude or longitude gridpoints.')
     mid_values = np.empty((K-1, L))
-    # # slow version
-    # for la in range(0, K-1):
-    #     for lo in range(0, L):
-    #         mid_values[la, lo] = (values_lat_lon[la,lo] + values_lat_lon[la+1,lo] + values_lat_lon[la, (lo+1)%L] + values_lat_lon[la+1,(lo+1)%L])/4
-    lat_wraparound_arr = np.empty((np.shape(values_lat_lon)[0], np.shape(values_lat_lon)[1]+1))
-    lat_wraparound_arr[:,0:-1] = values_lat_lon[:,:]
-    lat_wraparound_arr[:,-1] = values_lat_lon[:,0]
-    mid_values[:, :] = (lat_wraparound_arr[0:-1, 0:-1] + lat_wraparound_arr[1:, 0:-1] + lat_wraparound_arr[0:-1, 1:] +lat_wraparound_arr[1:, 1:]) / 4
+
+    # for easier wrapping around 180 degrees longitude
+    values_lat_lonWrapBand = np.empty((K, L+1))
+    values_lat_lonWrapBand[:,0:-1] = values_lat_lon[:,:]
+    values_lat_lonWrapBand[:,-1] = values_lat_lon[:,0]    # first strip copied to last+1 column
+
+    # taking average of 4 vertices
+    mid_values[:, :] = (values_lat_lonWrapBand[0:-1, 0:-1] + values_lat_lonWrapBand[0:-1, 1:]
+                      + values_lat_lonWrapBand[1:,   0:-1] + values_lat_lonWrapBand[1:,   1:]) / 4
 
     return mid_values
-
-
-def get_mid_pt_areas_N(arr_lat_lon):
-    m = arr_lat_lon[:-1, :]
-    return m
 
 
 # def temp_model_lat(lat_array, equator_pole_temp_diff=45, pole_temp=-20):
@@ -201,19 +199,26 @@ def get_mid_pt_areas_N(arr_lat_lon):
 
 
 if __name__ == '__main__':
-    Tc = -1.5   # sea water freezing point
+
+    Tc = -1 # -1.5   # sea water freezing point
     epochs_in_year = 48      # how to decompose first axis (e.g. 4752=48*99)
     epochs_before_equinox = 11
     num_years = 500
-    # raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output2.nc'
-    # raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_albedo_noise_Nils.nc'
-    raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_no_albedo_noise_Nils.nc'
+
+    # raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output2.nc'   # no albedo no noise
+    # title_suffix = f'\n(No albedo feedback, no noise, Tc={Tc}' + r'$^{\circ}C$)'
+    # raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_no_albedo_noise_Nils.nc'
+    # title_suffix = f'\n(No albedo feedback, with noise, Tc={Tc}'+r'$^{\circ}C$)'
+    raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_albedo_noise_Nils.nc'
+    title_suffix = f'\n(With albedo feedback, with noise, Tc={Tc}'+r'$^{\circ}C$)'
+
     result_savedir = './T_area/500yrs/'
     processed_data_dir = None # result_savedir
 
     if processed_data_dir is None and raw_data_file_path is None:
         raise ValueError('Need input.')
     elif processed_data_dir is None:
+
         # read unprocessed temperatures
         file2read = netcdf.NetCDFFile(raw_data_file_path, 'r')
         temps = (file2read.variables['temperature'])[:] * 1
@@ -225,158 +230,129 @@ if __name__ == '__main__':
             raise ValueError('Specified number of epochs in year and number of years is not consistent with the total number of epochs in the temperature record.')
 
         # get grid areas for weighting temperature and computing ice area
-        grid_areas = compute_sphere_grid_areas(latitude_coord=lats, longitude_coord=lons)
-        total_area_earth_m2 = np.sum(grid_areas)  # in m2
-        # test_total_area(lats, lons, temps, total_area_earth_m2)
-        
-        # remove southern hemisphere to exclude impact from Antarctica
-        half_len = int(np.ceil(len(lats) / 2))
-        lats = lats[:half_len]
-        temps = temps[:, :, :half_len, :]
-        grid_areas = grid_areas[:half_len,:]
-        total_area_earth_m2 /= 2
+        grid_areas_midpoints = compute_sphere_grid_areas_midpoints(latitude_coord=lats, longitude_coord=lons)
+        total_area_earth_m2 = np.sum(grid_areas_midpoints)  # in m2, or total_earth_area_m2()
 
+        # latitude indices in N and S+Equator hemispheres
+        lat_indices_N = np.arange(int(np.floor(len(lats) / 2)))
+        lat_indices_EqS = np.arange(int(np.ceil(len(lats) / 2))) + len(lat_indices_N)
 
         # -------- 1. Align temperatures to spring equinox - this will loose some data! Update #years num_periods
-        # # avg_t = compute_weighted_total(values=temps[0,0,:,:], weights=grid_areas) / total_area_earth_m2
-        temps = align_year_vernal_eqx(data=temps, epochs_in_year=epochs_in_year, e_in_y_before_vernal_eqx=epochs_before_equinox,remove_trailing0_y=True)  # year starts in March, at equinox
-        # # avg_t = compute_weighted_total(values=temps[0,0,:,:], weights=grid_areas) / total_area_earth_m2
-        # # last_line = temps[-1,0,:,:]
-        # # tg_last_line = compute_weighted_total(values=last_line, weights=grid_areas) / total_area_earth_m2
+        temps = align_year_vernal_eqx(data=temps, epochs_in_year=epochs_in_year, e_in_y_before_vernal_eqx=epochs_before_equinox,remove_trailing0_y=True)  # year starts in March, at equinox, # note: Temp for the last 48 weeks (1 year) ==0 ?
         num_years = np.shape(temps)[0] / epochs_in_year
         if not num_years.is_integer():
             raise ValueError(f"Number of full years ({num_years:1.5f}) seems to be not an integer number. Something went wrong.")
         else:
             num_years = int(num_years)
-                                                                                                                        # todo: why is Temp for the last 48 weeks (1 year) ==0 ?
-                                                                                                                        # todo: is it 48*7.6 day = 365 days or 48*7d = 336 and we are missing entire month in a year?
 
-        # -------- 2. Find frozen gridpoints in each weekly epoch
-        # temps_below_thr_indices = np.asarray(np.where(temps <= Tc))
-        #                                             # 4 coordinates:
-        #                                                 # temporal: temps_below_thr_indices[0]  (max:epochs_in_period*num_periods-1),
-        #                                                 # NA:       temps_below_thr_indices[1],
-        #                                                 # latitude: temps_below_thr_indices[2]  (max:65-1),
-        #                                                 # longitude:temps_below_thr_indices[3]  (max: 128-1)
         # todo: detached icebergs?
 
-        # -------- 3. Compute global temperature and total frozen area: weekly (for each separate time epoch)
-        # todo !!: not north point to decide temperature cause Norhte pole has too much impact then
-        # todo: see fortran code how they do it app.f90 line 15 and on
-        total_frozen_area_per_epoch = np.empty(epochs_in_year * num_years)
-        global_temperature_per_epoch = np.empty(epochs_in_year * num_years)
-        grid_areas = get_mid_pt_areas_N(arr_lat_lon=grid_areas) # issue: N-pole
+        # -------- 2. Compute global temperature and total frozen area: weekly (for each separate time epoch)
+        Tg_per_epoch = np.empty(epochs_in_year * num_years)
+        SIA_per_epoch_N = np.empty(epochs_in_year * num_years)
+        SIA_per_epoch_S = np.empty(epochs_in_year * num_years)
+        grid_areas_midpoints_N = grid_areas_midpoints[lat_indices_N, :]
+        grid_areas_midpoints_EqS = grid_areas_midpoints[lat_indices_EqS[:-1],:]  # midpoints so cutting quad "south of S-pole"
+        # for each epoch (1/48th of year)
         for t in tqdm(range(0, epochs_in_year * num_years), position=0, leave=True):       # without progress bar: for t in range(0, epochs_in_period*num_periods):
-            epoch_temps = temps[t, 0, :, :]
+            # Tg
+            T_in_epoch = temps[t, 0, :, :]
+            T_in_epoch_midpoints = get_midpoint_values(values_lat_lon=T_in_epoch, latitudes=lats, longitudes=lons)   # avg temperatures to mid of grid, note: this can always be more accurate! see app.f90 line 15 how they do it todo: various ways of doing this possible.
+            Tg_per_epoch[t] = compute_weighted_total(values=T_in_epoch_midpoints, weights=grid_areas_midpoints)
 
-            # avg temperatures to mid of grid, get corresponding areas # todo: this can always be more accurate!
-            epoch_temps = get_mid_pt_values_N(values_lat_lon=epoch_temps, latitudes=lats, longitudes=lons)  # issue: N-pole
+            # SIA
+            T_in_epoch_midpoints_N = T_in_epoch_midpoints[lat_indices_N,:]
+            T_in_epoch_midpoints_EqS = T_in_epoch_midpoints[lat_indices_EqS[:-1],:] # midpoints so cutting quad "south of S-pole"
+            idx_frozen_midpoints_N = np.where(T_in_epoch_midpoints_N < Tc)
+            idx_frozen_midpoints_S = np.where(T_in_epoch_midpoints_EqS < Tc)
+            SIA_per_epoch_N[t] = compute_weighted_total(values=None, weights=grid_areas_midpoints_N[idx_frozen_midpoints_N])
+            SIA_per_epoch_S[t] = compute_weighted_total(values=None, weights=grid_areas_midpoints_EqS[idx_frozen_midpoints_S])
+        Tg_per_epoch /= total_area_earth_m2
 
-            # # avg_t = compute_weighted_total(values=epoch_temps, weights=grid_areas) / total_area_earth_m2
-            indices_below_threshold = np.where(epoch_temps <= Tc)
-            total_frozen_area_per_epoch[t] = compute_weighted_total(values=None, weights=grid_areas[indices_below_threshold])
-            global_temperature_per_epoch[t] = compute_weighted_total(values=epoch_temps, weights=grid_areas)
-            # # avg_t = global_temperature_per_epoch[t]
-        global_temperature_per_epoch /= total_area_earth_m2
-        # # avg_t = global_temperature_per_epoch[-1]
-
-        total_frozen_area_per_epoch__2D_YbyE = total_frozen_area_per_epoch.reshape(num_years, epochs_in_year)
-        global_temperature_per_epoch__2D_YbyE = global_temperature_per_epoch.reshape(num_years, epochs_in_year)
-        # test_weighted_temp()
-
-        # -------- 4. Compute yearly, seasonal and monthly averages
+        # -------- 3. Compute yearly, seasonal and monthly averages
+        # reshape for easier averaging
+        SIA_per_epoch_N__2D_YbyE = SIA_per_epoch_N.reshape(num_years, epochs_in_year)
+        Tg_per_epoch__2D_YbyE = Tg_per_epoch.reshape(num_years, epochs_in_year)
         # yearly average
-        total_frozen_area_yearly_avg__1D_Y =avg_over_num_epochs(input_vector=total_frozen_area_per_epoch__2D_YbyE, num_periods=num_years, epochs_in_period=epochs_in_year)         # colapses 2nd dimension into 1, can reshape if needed
-        global_temperature_yearly_avg__1D_Y =avg_over_num_epochs(input_vector=global_temperature_per_epoch__2D_YbyE, num_periods=num_years, epochs_in_period=epochs_in_year)
-        # # avg_t = global_temperature_yearly_avg__1D_Y[-1]
-
-
-        # # seasonal average - works, but seasons are not nicely aligned to year, so it requires extra back-aligning to equinox - todo if needed
-        # seasons_in_year = 4
-        # if epochs_in_year % seasons_in_year == 0:
-        #     total_frozen_area_seasonal_avg__2D_YbyS = avg_over_num_epochs(input_vector=total_frozen_area_per_epoch__2D_YbyE, num_periods=num_years * seasons_in_year, epochs_in_period=int(epochs_in_year / seasons_in_year), reshape=(num_years, seasons_in_year))
-        #     global_temperature_seasonal_avg__2D_YbyS = avg_over_num_epochs(input_vector=global_temperature_per_epoch__2D_YbyE, num_periods=num_years * seasons_in_year, epochs_in_period=int(epochs_in_year / seasons_in_year), reshape=(num_years, seasons_in_year))
-        # else:
-        #     print(f'Number of epochs in year ({str(epochs_in_year)}) not divisible by 4 seasons. Seasonal average not computed.')
-
-
+        SIA_yearly_avg_N__1D_Y =avg_over_num_epochs(input_vector=SIA_per_epoch_N__2D_YbyE, num_periods=num_years, epochs_in_period=epochs_in_year)         # colapses 2nd dimension into 1, can reshape if needed
+        Tg_yearly_avg__1D_Y =avg_over_num_epochs(input_vector=Tg_per_epoch__2D_YbyE, num_periods=num_years, epochs_in_period=epochs_in_year)
         # monthly average
         months_in_year = 12
         if epochs_in_year % months_in_year == 0:
-            total_frozen_area_monthly_avg__2D_YbyM = avg_over_num_epochs(input_vector=total_frozen_area_per_epoch__2D_YbyE, num_periods=num_years * months_in_year, epochs_in_period=int(epochs_in_year / months_in_year), reshape=(num_years, months_in_year))
-            global_temperature_monthly_avg__2D_YbyM = avg_over_num_epochs(input_vector=global_temperature_per_epoch__2D_YbyE, num_periods=num_years * months_in_year, epochs_in_period=int(epochs_in_year / months_in_year), reshape=(num_years, months_in_year))
+            SIA_monthly_avg_N__2D_YbyM = avg_over_num_epochs(input_vector=SIA_per_epoch_N__2D_YbyE, num_periods=num_years * months_in_year, epochs_in_period=int(epochs_in_year / months_in_year), reshape=(num_years, months_in_year))
+            Tg_monthly_avg__2D_YbyM = avg_over_num_epochs(input_vector=Tg_per_epoch__2D_YbyE, num_periods=num_years * months_in_year, epochs_in_period=int(epochs_in_year / months_in_year), reshape=(num_years, months_in_year))
         else:
             print(f'Number of epochs in year ({str(epochs_in_year)}) not divisible by 12 months. Monthly average not computed.')
+        # # seasonal average - works, but seasons are not nicely aligned to year, so it requires extra back-aligning to equinox - todo if needed
+        # seasons_in_year = 4
+        # if epochs_in_year % seasons_in_year == 0:
+        #     SIA_seasonal_avg_N__2D_YbyS = avg_over_num_epochs(input_vector=SIA_per_epoch_N__2D_YbyE, num_periods=num_years * seasons_in_year, epochs_in_period=int(epochs_in_year / seasons_in_year), reshape=(num_years, seasons_in_year))
+        #     Tg_seasonal_avg__2D_YbyS = avg_over_num_epochs(input_vector=Tg_per_epoch__2D_YbyE, num_periods=num_years * seasons_in_year, epochs_in_period=int(epochs_in_year / seasons_in_year), reshape=(num_years, seasons_in_year))
+        # else:
+        #     print(f'Number of epochs in year ({str(epochs_in_year)}) not divisible by 4 seasons. Seasonal average not computed.')
 
-                        # todo?
-                        # get temperature profile with latitude for first epoch
-                        # check if it differs for different longitudes, and if so, how much, maybe avg over latitudes - NO fcn of latitude is the point ! and if it is reasonable (sinusoid or something)
-                        # subtract it from each consecutive epoch
+        # -------- 4. Save records
+        np.savetxt(result_savedir + 'Tg_per_epoch.txt', Tg_per_epoch__2D_YbyE)
+        np.savetxt(result_savedir + 'Tg_monthly_avg.txt', Tg_monthly_avg__2D_YbyM) if epochs_in_year % months_in_year == 0 else None
+        # np.savetxt(result_savedir + 'Tg_seasonal_avg.txt', Tg_seasonal_avg__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None # todo if needed
+        np.savetxt(result_savedir + 'Tg_yearly_avg.txt', Tg_yearly_avg__1D_Y)
 
-
-        np.savetxt(result_savedir + 'temp_global_per_epoch.txt', global_temperature_per_epoch__2D_YbyE)
-        np.savetxt(result_savedir + 'temp_global_monthly_avg.txt', global_temperature_monthly_avg__2D_YbyM) if epochs_in_year % months_in_year == 0 else None
-        # np.savetxt(result_savedir + 'temp_global_seasonal_avg.txt', global_temperature_seasonal_avg__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None # todo if needed
-        np.savetxt(result_savedir + 'temp_global_yearly_avg.txt', global_temperature_yearly_avg__1D_Y)
-
-        np.savetxt(result_savedir + 'total_frozen_area_per_epoch__2D_YbyE.txt', total_frozen_area_per_epoch__2D_YbyE)
-        np.savetxt(result_savedir + 'total_frozen_area_monthly_avg__2D_YbyM.txt', total_frozen_area_monthly_avg__2D_YbyM) if epochs_in_year % months_in_year == 0 else None
-        # np.savetxt(result_savedir + 'total_frozen_area_seasonal_avg__2D_YbyS.txt', total_frozen_area_seasonal_avg__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None # todo if needed
-        np.savetxt(result_savedir + 'total_frozen_area_yearly_avg__1D_Y.txt', total_frozen_area_yearly_avg__1D_Y)
+        np.savetxt(result_savedir + 'SIA_per_epoch_N__2D_YbyE.txt', SIA_per_epoch_N__2D_YbyE)
+        np.savetxt(result_savedir + 'SIA_monthly_avg_N__2D_YbyM.txt', SIA_monthly_avg_N__2D_YbyM) if epochs_in_year % months_in_year == 0 else None
+        # np.savetxt(result_savedir + 'SIA_seasonal_avg_N__2D_YbyS.txt', SIA_seasonal_avg_N__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None # todo if needed
+        np.savetxt(result_savedir + 'SIA_yearly_avg_N__1D_Y.txt', SIA_yearly_avg_N__1D_Y)
 
     else:
-        total_area_earth_m2 = total_earth_area() / 2
-        global_temperature_per_epoch__2D_YbyE = np.loadtxt(processed_data_dir + 'temp_global_per_epoch.txt')
-        global_temperature_yearly_avg__1D_Y = np.loadtxt(processed_data_dir + 'temp_global_yearly_avg.txt')
-        total_frozen_area_per_epoch__2D_YbyE = np.loadtxt(processed_data_dir + 'total_frozen_area_per_epoch__2D_YbyE.txt')
-        total_frozen_area_yearly_avg__1D_Y = np.loadtxt(processed_data_dir + 'total_frozen_area_yearly_avg__1D_Y.txt')
+        total_area_earth_m2 = total_earth_area_m2() #/ 2
+        Tg_per_epoch__2D_YbyE = np.loadtxt(processed_data_dir + 'Tg_per_epoch.txt')
+        Tg_yearly_avg__1D_Y = np.loadtxt(processed_data_dir + 'Tg_yearly_avg.txt')
+        SIA_per_epoch_N__2D_YbyE = np.loadtxt(processed_data_dir + 'SIA_per_epoch_N__2D_YbyE.txt')
+        SIA_yearly_avg_N__1D_Y = np.loadtxt(processed_data_dir + 'SIA_yearly_avg_N__1D_Y.txt')
 
         try:
-            global_temperature_monthly_avg__2D_YbyM = np.loadtxt(processed_data_dir + 'temp_global_monthly_avg.txt')
-            total_frozen_area_monthly_avg__2D_YbyM = np.loadtxt(processed_data_dir + 'total_frozen_area_monthly_avg__2D_YbyM.txt')
+            Tg_monthly_avg__2D_YbyM = np.loadtxt(processed_data_dir + 'Tg_monthly_avg.txt')
+            SIA_monthly_avg_N__2D_YbyM = np.loadtxt(processed_data_dir + 'SIA_monthly_avg_N__2D_YbyM.txt')
         except:
-            global_temperature_monthly_avg__2D_YbyM = None
-            total_frozen_area_monthly_avg__2D_YbyM = None
+            Tg_monthly_avg__2D_YbyM = None
+            SIA_monthly_avg_N__2D_YbyM = None
             print('Monthly averages not available.')
 
         try:
-            global_temperature_seasonal_avg__2D_YbyS = np.loadtxt(processed_data_dir + 'temp_global_seasonal_avg.txt')
-            total_frozen_area_seasonal_avg__2D_YbyS = np.loadtxt(processed_data_dir + 'total_frozen_area_seasonal_avg__2D_YbyS.txt')
+            Tg_seasonal_avg__2D_YbyS = np.loadtxt(processed_data_dir + 'Tg_seasonal_avg.txt')
+            SIA_seasonal_avg_N__2D_YbyS = np.loadtxt(processed_data_dir + 'SIA_seasonal_avg_N__2D_YbyS.txt')
         except:
-            global_temperature_seasonal_avg__2D_YbyS = None
-            total_frozen_area_seasonal_avg__2D_YbyS = None
+            Tg_seasonal_avg__2D_YbyS = None
+            SIA_seasonal_avg_N__2D_YbyS = None
             print('Seasonal averages not available.')
 
 
     # 12 months - montly average
     titles = np.array(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'])
-    xlabels = np.full(months_in_year, r'$T_g$')
-    ylabels = np.full(months_in_year, r'Area(Tg) [$10^6\;km^2$]')
-    plot_area_vs_temp_subpl(temp_2D__YbyTotalSubplots=global_temperature_monthly_avg__2D_YbyM,
-                            area_2D__YbyTotalSubplots=total_frozen_area_monthly_avg__2D_YbyM/(1e6*1e6),
-                            subplot_rows=3, subplot_cols=4, figsize=(20,12), global_title='Ice area (avg in months)',
-                            titles=titles, xlabels=xlabels, ylabels=ylabels, linestyle=' ', fig_savepath=result_savedir + 'Tg-area_months')
+    xlabels = np.full(months_in_year, r'$T_g[^{\circ}C]$')
+    ylabels = np.full(months_in_year, r'SIA(Tg) [$10^6\;km^2$]')
+    plot_area_vs_temp_subpl(temp_2D__YbyTotalSubplots=Tg_monthly_avg__2D_YbyM,
+                            area_2D__YbyTotalSubplots=SIA_monthly_avg_N__2D_YbyM / (1e6 * 1e6),
+                            subplot_rows=3, subplot_cols=4, figsize=(20,12), global_title='Sea-ice area (avg in months)'+title_suffix,
+                            titles=titles, xlabels=xlabels, ylabels=ylabels, linestyle=' ', fig_savepath=result_savedir + 'Tg-SIA_months')
 
 
     # --- Plot Tg, and Area(Tg)
     # by epoch
-    plot_temp_vs_time_and_area_vs_temp(temp_1D=np.matrix.flatten(global_temperature_per_epoch__2D_YbyE), area_1D=np.matrix.flatten(total_frozen_area_per_epoch__2D_YbyE) / (1e6 * 1e6),
-                                       figsize=(18,7), titles_2=np.array(['Global temperature (by epoch)', 'Ice area (by epoch)']),
-                                       xlabels_2=np.array([r'$1/48^{th}$ of yr', r'$T_g$']), ylabels_2=np.array([r'$T_g$', r'Area(Tg) [$10^6\;km^2$]']),
-                                       linestyles_2=np.array(['solid',' ']), fig_savepath=result_savedir + 'Tg_Tg-area_epochs')
+    plot_temp_vs_time_and_area_vs_temp(temp_1D=np.matrix.flatten(Tg_per_epoch__2D_YbyE), area_1D=np.matrix.flatten(SIA_per_epoch_N__2D_YbyE) / (1e6 * 1e6),
+                                       figsize=(18,7), titles_2=np.array(['Global temperature (by epoch)'+title_suffix, 'Sea-ice area (by epoch)'+title_suffix]),
+                                       xlabels_2=np.array([r'$1/48^{th}$ of yr', r'$T_g[^{\circ}C]$']), ylabels_2=np.array([r'$T_g[^{\circ}C]$', r'SIA(Tg) [$10^6\;km^2$]']),
+                                       linestyles_2=np.array(['solid',' ']), fig_savepath=result_savedir + 'Tg_Tg-SIA_epochs')
     # avg by monthly window - not plotted
     # avg by seasonal window - not plotted
     # avg by yearly window
-    plot_temp_vs_time_and_area_vs_temp(temp_1D=np.matrix.flatten(global_temperature_yearly_avg__1D_Y), area_1D=np.matrix.flatten(total_frozen_area_yearly_avg__1D_Y) / (1e6 * 1e6),
-                                       figsize=(18,7), titles_2=np.array(['Global temperature (yearly avg window)', 'Ice area (yearly avg window)']),
-                                       xlabels_2=np.array([r'yr', r'$T_g$']), ylabels_2=np.array([r'$T_g$', r'Area(Tg) [$10^6\;km^2$]']),
-                                       linestyles_2=np.array(['solid','solid']), fig_savepath=result_savedir + 'Tg_Tg-area_yearly-avgs')
+    plot_temp_vs_time_and_area_vs_temp(temp_1D=np.matrix.flatten(Tg_yearly_avg__1D_Y), area_1D=np.matrix.flatten(SIA_yearly_avg_N__1D_Y) / (1e6 * 1e6),
+                                       figsize=(18,7), titles_2=np.array(['Global temperature (yearly avg window)'+title_suffix, 'Sea-ice area (yearly avg window)'+title_suffix]),
+                                       xlabels_2=np.array([r'yr', r'$T_g[^{\circ}C]$']), ylabels_2=np.array([r'$T_g[^{\circ}C]$', r'SIA(Tg) [$10^6\;km^2$]']),
+                                       linestyles_2=np.array(['solid','solid']), fig_savepath=result_savedir + 'Tg_Tg-SIA_yearly-avgs')
 
-    # # # ax2[1].plot(Tg_annual, frozen_area_annual_m2 /1e6, '.', markersize=4, linestyle='solid', linewidth=0.7)
-    # # ax2[1].plot(Tg_annual, frozen_area_annual_m2 /(1e6*1e6), '.', markersize=4, linestyle='solid', linewidth=0.7)
-    # # # ax1[1].set_ylabel(r'Area(Tg) [$km^2$]')
-    # # ax1[1].set_ylabel(r'Area(Tg) [$10^6\;km^2$]')
-
-
+    # todo?
+    # get temperature profile with latitude for first epoch
+    # check if it differs for different longitudes, and if so, how much, maybe avg over latitudes - NO fcn of latitude is the point ! and if it is reasonable (sinusoid or something)
+    # subtract it from each consecutive epoch
 
     plt.show(block=True)
