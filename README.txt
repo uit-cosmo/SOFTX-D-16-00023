@@ -10,3 +10,8 @@ Functionality implementation:
     last commit: 321f80edcfc570f5d426d269c57ff9e48394aced 
                 + all earlier commits for ./postprocess_python/main.py file.
     affected file: ./postprocess_python/main.py
+    example output:
+            where:          ./postprocess_python/T_area/500yrs/ 
+            description:    output of processing of 3 .nc files with different albedo and noise configuration. 
+                            For each case there is: plot of SIA(Tg), csv table of SIA values, csv table of Tg values 
+                            - all in yearly, monthly and by-epoch versions.
