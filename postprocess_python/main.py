@@ -33,7 +33,6 @@ def area_quads_sphere(latitudes, longitudes, indices_lat, indices_lon):
     areas = np.empty(len(indices_lat))
     for i in range(0, len(indices_lat)):
         areas[i] = area_1quad_sphere(*get_lower_right_quad_vertices(latitudes, longitudes, indices_lat[i], indices_lon[i]))
-    # areas = np.fromiter((area_1quad_sphere(*get_lower_right_quad_vertices(latitudes, longitudes, indices_lat[i], indices_lon[i])) for i in range(0, len(indices_lon))), dtype='float')
     return np.sum(areas)  # in m2
 
 
@@ -193,13 +192,9 @@ def get_midpoint_values(values_lat_lon, latitudes, longitudes):
     return mid_values
 
 
-# def temp_model_lat(lat_array, equator_pole_temp_diff=45, pole_temp=-20):
-#     '''Based on https://journals.ametsoc.org/view/journals/clim/26/18/jcli-d-12-00636.1.xml'''
-#     return np.cos(lat_array)*equator_pole_temp_diff + pole_temp
-
-
 if __name__ == '__main__':
 
+    # -------- Set parameters --------
     Tc = -1 # -1.5   # sea water freezing point
     epochs_in_year = 48      # how to decompose first axis (e.g. 4752=48*99)
     epochs_before_equinox = 11
@@ -210,11 +205,12 @@ if __name__ == '__main__':
     # raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_no_albedo_noise_Nils.nc'
     # title_suffix = f'\n(No albedo feedback, with noise, Tc={Tc}'+r'$^{\circ}C$)'
     raw_data_file_path = '../EBM/output/500yrs/' + 'timesteps-output_albedo_noise_Nils.nc'
-    title_suffix = f'\n(With albedo feedback, with noise, Tc={Tc}'+r'$^{\circ}C$)'
+    title_suffix = f'\n(With albedo feedback, with noise, Tc={Tc}'+r'$^{\circ}C$)'      # figure title 2nd line
 
-    result_savedir = './T_area/500yrs/'
-    processed_data_dir = None # result_savedir
+    result_savedir = './T_area/500yrs/'         # to save data to
+    processed_data_dir = None # result_savedir  # to read data from
 
+    # -------- Read and process data --------
     if processed_data_dir is None and raw_data_file_path is None:
         raise ValueError('Need input.')
     elif processed_data_dir is None:
@@ -245,7 +241,7 @@ if __name__ == '__main__':
         else:
             num_years = int(num_years)
 
-        # todo: detached icebergs?
+        # todo: for now counting all grid-areas below a freezing threshold. Might be needed to exclude 'detached icebergs' and count only area above threshold isoterm.
 
         # -------- 2. Compute global temperature and total frozen area: weekly (for each separate time epoch)
         Tg_per_epoch = np.empty(epochs_in_year * num_years)
@@ -257,7 +253,7 @@ if __name__ == '__main__':
         for t in tqdm(range(0, epochs_in_year * num_years), position=0, leave=True):       # without progress bar: for t in range(0, epochs_in_period*num_periods):
             # Tg
             T_in_epoch = temps[t, 0, :, :]
-            T_in_epoch_midpoints = get_midpoint_values(values_lat_lon=T_in_epoch, latitudes=lats, longitudes=lons)   # avg temperatures to mid of grid, note: this can always be more accurate! see app.f90 line 15 how they do it todo: various ways of doing this possible.
+            T_in_epoch_midpoints = get_midpoint_values(values_lat_lon=T_in_epoch, latitudes=lats, longitudes=lons)   # avg temperatures to mid of grid, note: this can always be more accurate! see app.f90 line 15 how they do it
             Tg_per_epoch[t] = compute_weighted_total(values=T_in_epoch_midpoints, weights=grid_areas_midpoints)
 
             # SIA
@@ -283,7 +279,8 @@ if __name__ == '__main__':
             Tg_monthly_avg__2D_YbyM = avg_over_num_epochs(input_vector=Tg_per_epoch__2D_YbyE, num_periods=num_years * months_in_year, epochs_in_period=int(epochs_in_year / months_in_year), reshape=(num_years, months_in_year))
         else:
             print(f'Number of epochs in year ({str(epochs_in_year)}) not divisible by 12 months. Monthly average not computed.')
-        # # seasonal average - works, but seasons are not nicely aligned to year, so it requires extra back-aligning to equinox - todo if needed
+
+        # # seasonal average - todo: works, but seasons are not nicely aligned to year, so it requires extra back-aligning to equinox # tag: seasonal ag
         # seasons_in_year = 4
         # if epochs_in_year % seasons_in_year == 0:
         #     SIA_seasonal_avg_N__2D_YbyS = avg_over_num_epochs(input_vector=SIA_per_epoch_N__2D_YbyE, num_periods=num_years * seasons_in_year, epochs_in_period=int(epochs_in_year / seasons_in_year), reshape=(num_years, seasons_in_year))
@@ -294,12 +291,12 @@ if __name__ == '__main__':
         # -------- 4. Save records
         np.savetxt(result_savedir + 'Tg_per_epoch.txt', Tg_per_epoch__2D_YbyE)
         np.savetxt(result_savedir + 'Tg_monthly_avg.txt', Tg_monthly_avg__2D_YbyM) if epochs_in_year % months_in_year == 0 else None
-        # np.savetxt(result_savedir + 'Tg_seasonal_avg.txt', Tg_seasonal_avg__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None # todo if needed
+        # np.savetxt(result_savedir + 'Tg_seasonal_avg.txt', Tg_seasonal_avg__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None # tag: seasonal ag
         np.savetxt(result_savedir + 'Tg_yearly_avg.txt', Tg_yearly_avg__1D_Y)
 
         np.savetxt(result_savedir + 'SIA_per_epoch_N__2D_YbyE.txt', SIA_per_epoch_N__2D_YbyE)
         np.savetxt(result_savedir + 'SIA_monthly_avg_N__2D_YbyM.txt', SIA_monthly_avg_N__2D_YbyM) if epochs_in_year % months_in_year == 0 else None
-        # np.savetxt(result_savedir + 'SIA_seasonal_avg_N__2D_YbyS.txt', SIA_seasonal_avg_N__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None # todo if needed
+        # np.savetxt(result_savedir + 'SIA_seasonal_avg_N__2D_YbyS.txt', SIA_seasonal_avg_N__2D_YbyS) if epochs_in_year % seasons_in_year == 0 else None # tag: seasonal ag
         np.savetxt(result_savedir + 'SIA_yearly_avg_N__1D_Y.txt', SIA_yearly_avg_N__1D_Y)
 
     else:
@@ -349,10 +346,5 @@ if __name__ == '__main__':
                                        figsize=(18,7), titles_2=np.array(['Global temperature (yearly avg window)'+title_suffix, 'Sea-ice area (yearly avg window)'+title_suffix]),
                                        xlabels_2=np.array([r'yr', r'$T_g[^{\circ}C]$']), ylabels_2=np.array([r'$T_g[^{\circ}C]$', r'SIA(Tg) [$10^6\;km^2$]']),
                                        linestyles_2=np.array(['solid','solid']), fig_savepath=result_savedir + 'Tg_Tg-SIA_yearly-avgs')
-
-    # todo?
-    # get temperature profile with latitude for first epoch
-    # check if it differs for different longitudes, and if so, how much, maybe avg over latitudes - NO fcn of latitude is the point ! and if it is reasonable (sinusoid or something)
-    # subtract it from each consecutive epoch
 
     plt.show(block=True)
