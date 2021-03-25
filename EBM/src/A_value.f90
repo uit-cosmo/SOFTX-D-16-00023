@@ -19,7 +19,7 @@ subroutine A_value(CO2ppm,A)
       real CO2_Base, A_Base
       parameter(CO2_Base=315.0, A_Base=210.3)
       real:: rand_float 
-      integer:: stdv = 10
+      integer:: stdv = 0!10 # here you add the noise
       CALL RANDOM_NUMBER(rand_float)
       A=A_Base-5.35*log(CO2ppm/CO2_Base)  + (stdv * rand_float - stdv/2)
 

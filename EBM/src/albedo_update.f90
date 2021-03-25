@@ -23,30 +23,21 @@
             geo=geography_0(i,j)
             temp_mask_int=temp_mask(i,j)
             !landmask: 1. land;  2. sea ice; 3. land ice; 5 ocean.
-            if((geo.eq.1).and.(temp_mask_int.eq.0)) then 
-                 albedo(i,j)=0.30 +0.09*legende !land without ice 
-                 geography_updated(i,j) = 1
-                 !print *, "land without ice"
-            end if
             if((geo.eq.2).and.(temp_mask_int.eq.1)) then
                 albedo(i,j)=0.60 !sea ice
                
                 geography_updated(i,j) = 2
                 !print *, "sea ice"
             end if
-            if((geo.eq.1).and.(temp_mask_int.eq.1)) then 
-                albedo(i,j)=0.70 !land with ice
-                geography_updated(i,j) = 3
-                !print *, "land ice"
-            end if
             if((geo.eq.2).and.(temp_mask_int.eq.0)) then 
                 albedo(i,j)=0.29 +0.09*legende !ocean without ice
                 geography_updated(i,j) = 5
                 !print *, "ocean"
             end if
-            if ((j.ge.50).and.(geo.eq.1)) then !Antarctica static as ice 
-                albedo(i,j)=0.70
-            end if
+            !if ((j.ge.50).and.(geo.eq.1)) then !Antarctica static as ice 
+            !    albedo(i,j)=0.70
+            !    geography_updated(i,j) = 3
+            !end if
             Pcoalbedo(i, j) = 1.0 - albedo(i, j)
         end do
     end do
@@ -71,8 +62,6 @@
                     temp_mask(i,j) = 1 ! 1 corresponds to ice
                 elseif ((Temp(i, j).gt.-1).and.(geography_0(i, j).eq.2)) then
                     temp_mask(i,j) = 0  ! 0 corresponds to no ice
-                elseif ((Temp(i, j).le.-5).and.(geography_0(i, j).eq.1)) then
-                    temp_mask(i,j) = 1  ! 0 corresponds to no ice
                 else 
                     temp_mask(i,j) = 0
                 end if 

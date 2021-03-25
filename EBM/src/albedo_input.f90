@@ -8,8 +8,8 @@
 !     This is the name of the data file we will read.
       logical Albedo_2D
       character*(*) FILE_NAME
-      parameter (FILE_NAME='../input/albedo.nc')
-      !parameter (FILE_NAME='../input/albedo_year_1.nc')
+      !parameter (FILE_NAME='../input/albedo.nc')
+      parameter (FILE_NAME='../input/albedo_year_1.nc')
       integer ncid
       real error 
       parameter(error = 1.0e-10)

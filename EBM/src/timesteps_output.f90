@@ -13,7 +13,7 @@
       integer NDIMS 
       parameter (NDIMS = 4)
       integer NYEARS, NRECS, NLVS, NLATS, NLONS
-      parameter ( NYEARS = 500, NRECS = NYEARS*48, NLVS=1, NLATS = 65, NLONS = 128)
+      parameter ( NYEARS = 100, NRECS = NYEARS*48, NLVS=1, NLATS = 65, NLONS = 128)
       character*(*) LVL_NAME, LAT_NAME, LON_NAME, REC_NAME
       parameter (LVL_NAME='level', LAT_NAME = 'latitude', LON_NAME = 'longitude')
       parameter (REC_NAME = 'time')

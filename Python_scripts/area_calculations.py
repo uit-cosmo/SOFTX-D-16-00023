@@ -1,3 +1,7 @@
+"""
+This function is for generating an area array directly from the Fortran code. Used for calculating the global temperature.
+"""
+
 import numpy as  np 
 
 def generate_area_array(): 
