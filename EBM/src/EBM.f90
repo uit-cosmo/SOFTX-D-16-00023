@@ -309,7 +309,7 @@ DO yr = 1, Maxyrs
 
 ! ---------------- Martin added this ------------------------------------
 
-	CO2ppm=CO2ppm*1.0
+	CO2ppm=CO2ppm*1.02
 	call A_value(CO2ppm, A)
 	CALL Solar_Forcing (0, .false., S0, .false., Pcoalbedo, A, ecc, ob, per, SF)   
 
@@ -318,9 +318,9 @@ DO yr = 1, Maxyrs
 ! ---------------- Martin added this ------------------------------------     
 
   F = SF 
-  CALL HeatCapacities (HeatCap, geography_updated, tau_land, tau_snow, tau_sea_ice, &
-                          tau_mixed_layer, .FALSE.)
-  CALL FMG_Setup (nx, ny, h, geom, Heatcap, geography_updated, GCnp, GCsp) 
+  !CALL HeatCapacities (HeatCap, geography_updated, tau_land, tau_snow, tau_sea_ice, &
+  !                        tau_mixed_layer, .FALSE.)
+  !CALL FMG_Setup (nx, ny, h, geom, Heatcap, geography_updated, GCnp, GCsp) 
 !--------------------  START LOOP OVER MODEL TIME STEPS  ----------------- 
   DO tstep = 1, NT    
 
