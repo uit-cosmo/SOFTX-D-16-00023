@@ -216,7 +216,7 @@ initial_year=1950
 !CO2ppm=315.0 !21kaBP
 !initial_year=-21000
 
-Maxyrs = 500
+Maxyrs = 100
 FirstYr = Maxyrs
 
 !------------------------  Initialize some arrays  ----------------------- 
@@ -309,7 +309,7 @@ DO yr = 1, Maxyrs
 
 ! ---------------- Martin added this ------------------------------------
 
-	CO2ppm=CO2ppm*1.02
+	CO2ppm=CO2ppm*1.0
 	call A_value(CO2ppm, A)
 	CALL Solar_Forcing (0, .false., S0, .false., Pcoalbedo, A, ecc, ob, per, SF)   
 
@@ -318,7 +318,9 @@ DO yr = 1, Maxyrs
 ! ---------------- Martin added this ------------------------------------     
 
   F = SF 
-
+  CALL HeatCapacities (HeatCap, geography_updated, tau_land, tau_snow, tau_sea_ice, &
+                          tau_mixed_layer, .FALSE.)
+  CALL FMG_Setup (nx, ny, h, geom, Heatcap, geography_updated, GCnp, GCsp) 
 !--------------------  START LOOP OVER MODEL TIME STEPS  ----------------- 
   DO tstep = 1, NT    
 
@@ -358,13 +360,14 @@ DO yr = 1, Maxyrs
 
     !---- Nils added this ----
     if (input_albedo_param == 1) then
-      if((yr==1).and.(tstep==1)) then
-        do j = 1, NY6
-          do i = 1, NX6
-            F2(i, j, 1) = SF(i, j, 1)
-          end do
-        end do
-      else
+      !if((yr==1).and.(tstep==1)) then
+      !  do j = 1, NY6
+      !    do i = 1, NX6
+      !      F2(i, j, 1) = SF(i, j, 1)
+      !    end do
+      !  end do
+      !else
+  
         CALL update_albedo_timestep (Pcoalbedo2, Temp, geography_0, geography_updated)
         !CALL HeatCapacities (HeatCap, geography_updated, tau_land, tau_snow, tau_sea_ice, &
         !            tau_mixed_layer, .FALSE.)
@@ -375,7 +378,7 @@ DO yr = 1, Maxyrs
             !print *, F2(i, j, tstep), F(i, j, tstep)
           end do
         end do
-      end if
+      !end if
       F = F2
     end if
     !-------------------
