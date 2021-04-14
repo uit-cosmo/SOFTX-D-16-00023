@@ -360,13 +360,13 @@ DO yr = 1, Maxyrs
 
     !---- Nils added this ----
     if (input_albedo_param == 1) then
-      !if((yr==1).and.(tstep==1)) then
-      !  do j = 1, NY6
-      !    do i = 1, NX6
-      !      F2(i, j, 1) = SF(i, j, 1)
-      !    end do
-      !  end do
-      !else
+      if(yr==1) then !.and.(tstep==1)) then
+        do j = 1, NY6
+          do i = 1, NX6
+            F2(i, j, 1) = SF(i, j, 1)
+          end do
+        end do
+      else
   
         CALL update_albedo_timestep (Pcoalbedo2, Temp, geography_0, geography_updated)
         !CALL HeatCapacities (HeatCap, geography_updated, tau_land, tau_snow, tau_sea_ice, &
@@ -378,7 +378,7 @@ DO yr = 1, Maxyrs
             !print *, F2(i, j, tstep), F(i, j, tstep)
           end do
         end do
-      !end if
+      end if
       F = F2
     end if
     !-------------------
@@ -421,6 +421,17 @@ DO yr = 1, Maxyrs
         mcount = mcount + 1
         sum = 0.0            
       end if
+      if (input_albedo_param == 0) then 
+        Pcoalbedo2 = Pcoalbedo(:, :, tstep)
+      end if 
+        write (step, '(i2.2)') tstep
+        write (yearstring, '(i4.4)') yr
+  
+        datafile = '../output/al'//step//'.'//yearstring//'.bin'
+        open (unit=99, file=datafile, status='replace')            
+        write (99,*) Pcoalbedo2
+        close(99)
+    
     end if
     GTemp =  GTemp  + Global (Temp, z(iaw(NG)), 0)     
     tscount = tscount + 1.0   
@@ -446,7 +457,7 @@ write (2,90) elapsed_time/60.
 
 call monthly_output
 call timesteps_output (input_albedo_param)
-
+call albedo_output (input_albedo_param)
 close (2)
 
 END PROGRAM EBM
