@@ -27,8 +27,8 @@ def define_albedo_1st_year():
     albedo = np.zeros((48, ny,nx))
     temp_mask = np.zeros((ny,nx))
     for t in range(48): 
-        temp_mask[(temp[98*48 + t, :, :][0, :, :] <= -1) & (geography == 2)] = 1#1 # sea ice
-        temp_mask[(temp[98*48 + t, :, :][0, :, :] > -1) & (geography == 2)] = 0 # sea without ice
+        temp_mask[(temp[2*48 + t, :, :][0, :, :] <= 2) & (geography == 2)] = 1#1 # sea ice
+        temp_mask[(temp[2*48 + t, :, :][0, :, :] > 2) & (geography == 2)] = 0 # sea without ice
         #temp_mask[(temp[0*48 + t, :, :][0, :, :] <= -5) & (geography == 1)] = 1 # land ice
         #temp_mask[(temp[0*48 + t, :, :][0, :, :] > -5) & (geography == 1)] = 0 # land without ice
 

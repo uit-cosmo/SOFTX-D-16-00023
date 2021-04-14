@@ -16,4 +16,4 @@ def save_data(data):
     """ 
     np.savetxt('EBM/preprocess/init_temp.dat', data, fmt= "%f",delimiter = ',')
     
-save_data(temp[98*48,0,:,:]) #take one of the last temperature values (so "converged")
+save_data(temp[22*48,0,:,:]) #take one of the last temperature values (so "converged")
